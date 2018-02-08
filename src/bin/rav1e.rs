@@ -21,7 +21,6 @@ fn main() {
             break;
         }
         fi.number += 1;
-        fi.show_existing_frame = fi.number % 2 == 1;
         if fi.number == files.limit {
             break;
         }
