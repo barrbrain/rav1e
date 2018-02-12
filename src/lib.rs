@@ -32,7 +32,6 @@ use transform::*;
 use quantize::*;
 use plane::*;
 use predict::*;
-use rdo::*;
 use std::fmt;
 
 pub struct Frame {
@@ -266,6 +265,36 @@ fn diff_4x4(dst: &mut [i16; 16], src1: &PlaneSlice, src2: &PlaneSlice) {
     }
 }
 
+fn copy_4x4(dst: &mut [u16], stride: usize, src: &PlaneSlice) {
+    for j in 0..4 {
+        for i in 0..4 {
+            dst[j*stride + i] = src.p(i, j);
+        }
+    }
+}
+
+pub fn sse_b(fs: &mut FrameState, p: usize, bo: &BlockOffset, mode: PredictionMode) -> u64 {
+    let stride = fs.input.planes[p].cfg.stride;
+    let rec = &mut fs.rec.planes[p];
+    let po = bo.plane_offset(&fs.input.planes[p].cfg);
+
+    mode.predict_4x4(&mut rec.mut_slice(&po));
+
+    let mut residual = [0 as i16; 16];
+    diff_4x4(&mut residual,
+             &fs.input.planes[p].slice(&po),
+             &rec.slice(&po));
+
+    copy_4x4(&mut rec.mut_slice(&po).as_mut_slice(), stride, &fs.input.planes[p].slice(&po));
+
+    let mut sse: u64 = 0;
+    for i in 0..16 {
+        let dist = residual[i] as i64;
+        sse += (dist * dist) as u64;
+    }
+    sse
+}
+
 pub fn write_b(cw: &mut ContextWriter, fi: &FrameInvariants, fs: &mut FrameState, p: usize, bo: &BlockOffset, mode: PredictionMode, tx_type: TxType) {
     let stride = fs.input.planes[p].cfg.stride;
     let rec = &mut fs.rec.planes[p];
@@ -320,6 +349,27 @@ fn write_sb(cw: &mut ContextWriter, fi: &FrameInvariants, fs: &mut FrameState, s
     }
 }
 
+fn sse_sb(fs: &mut FrameState, sbo: &SuperBlockOffset, mode: PredictionMode) -> u64 {
+    let mut sse = 0 as u64;
+    for p in 0..1 {
+        for by in 0..16 {
+            for bx in 0..16 {
+                let bo = sbo.block_offset(bx, by);
+                sse += sse_b(fs, p, &bo, mode);
+            }
+        }
+    }
+    for p in 1..3 {
+        for by in 0..8 {
+            for bx in 0..8 {
+                let bo = sbo.block_offset(bx, by);
+                sse += sse_b(fs, p, &bo, mode);
+            }
+        }
+    }
+    sse
+}
+
 fn encode_tile(fi: &FrameInvariants, fs: &mut FrameState) -> Vec<u8> {
     let w = ec::Writer::new();
     let fc = CDFContext::new();
@@ -341,26 +391,19 @@ fn encode_tile(fi: &FrameInvariants, fs: &mut FrameState) -> Vec<u8> {
         }
         for sbx in 0..fi.sb_width {
             let sbo = SuperBlockOffset { x: sbx, y: sby };
-            let po = sbo.plane_offset(&fs.input.planes[0].cfg);
-            let tell = cw.w.tell_frac();
 
             let mut best_mode = PredictionMode::DC_PRED;
             let mut best_rd = std::f64::MAX;
 
             for &mode in RAV1E_INTRA_MODES {
-                let checkpoint = cw.checkpoint();
-
-                write_sb(&mut cw, fi, fs, &sbo, mode);
-                let d = sse_64x64(&fs.input.planes[0].slice(&po), &fs.rec.planes[0].slice(&po));
-                let r = ((cw.w.tell_frac() - tell) as f64)/8.0;
+                let d = sse_sb(fs, &sbo, mode);
+                let r = 0 as f64;
 
                 let rd = (d as f64) + lambda*r;
                 if rd < best_rd {
                     best_rd = rd;
                     best_mode = mode;
                 }
-
-                cw.rollback(checkpoint.clone());
             }
 
             write_sb(&mut cw, fi, fs, &sbo, best_mode);
