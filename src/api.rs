@@ -78,6 +78,7 @@ pub struct EncoderConfig {
   pub pass: Option<u8>,
   pub show_psnr: bool,
   pub stats_file: Option<PathBuf>,
+  pub train_rdo: bool,
 }
 
 impl Default for EncoderConfig {
@@ -112,6 +113,7 @@ impl EncoderConfig {
       pass: None,
       show_psnr: false,
       stats_file: None,
+      train_rdo: false
     }
   }
 }
