@@ -223,6 +223,10 @@ pub fn rdo_mode_decision(
       mode_set_chroma.push(PredictionMode::DC_PRED);
     }
 
+    if is_chroma_block && luma_mode.is_intra() && bsize.cfl_allowed() && !bsize.is_sub8x8() {
+      mode_set_chroma.push(PredictionMode::UV_CFL_PRED);
+    }
+
     // Find the best chroma prediction mode for the current luma prediction mode
     let cfl = &CFLParams::new();
     for &chroma_mode in &mode_set_chroma {
