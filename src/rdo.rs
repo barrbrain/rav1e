@@ -224,6 +224,7 @@ pub fn rdo_mode_decision(
     }
 
     // Find the best chroma prediction mode for the current luma prediction mode
+    let cfl = &CFLParams::new();
     for &chroma_mode in &mode_set_chroma {
       for &skip in &[false, true] {
         // Don't skip when using intra modes
@@ -233,7 +234,7 @@ pub fn rdo_mode_decision(
         let tell = wr.tell_frac();
 
         encode_block_a(seq, cw, wr, bsize, bo, skip);
-        encode_block_b(fi, fs, cw, wr, luma_mode, chroma_mode, bsize, bo, skip, seq.bit_depth);
+        encode_block_b(fi, fs, cw, wr, luma_mode, chroma_mode, bsize, bo, skip, seq.bit_depth, cfl);
 
         let cost = wr.tell_frac() - tell;
         let rd = compute_rd_cost(
@@ -309,8 +310,9 @@ pub fn rdo_tx_type_decision(
         fi, fs, cw, wr, mode, bo, bsize, tx_size, tx_type, false, bit_depth
       );
     }  else {
+      let cfl = &CFLParams::new();
       write_tx_blocks(
-        fi, fs, cw, wr, mode, mode, bo, bsize, tx_size, tx_type, false, bit_depth
+        fi, fs, cw, wr, mode, mode, bo, bsize, tx_size, tx_type, false, bit_depth, cfl
       );
     }
 
