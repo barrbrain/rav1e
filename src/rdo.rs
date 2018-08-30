@@ -50,6 +50,7 @@ pub struct RDOPartitionOutput {
   pub rd_cost: f64,
   pub bo: BlockOffset,
   pub pred_mode_luma: PredictionMode,
+  pub tx_type: TxType,
   pub pred_mode_chroma: PredictionMode,
   pub pred_cfl_params: CFLParams,
   pub ref_frame: usize,
@@ -229,6 +230,7 @@ pub fn rdo_mode_decision(
   seq: &Sequence, fi: &FrameInvariants, fs: &mut FrameState, cw: &mut ContextWriter,
   bsize: BlockSize, bo: &BlockOffset) -> RDOOutput {
   let mut best_mode_luma = PredictionMode::DC_PRED;
+  let mut best_tx_type = TxType::DCT_DCT;
   let mut best_mode_chroma = PredictionMode::DC_PRED;
   let mut best_cfl_params = CFLParams::new();
   let mut best_skip = false;
@@ -322,6 +324,7 @@ pub fn rdo_mode_decision(
         if rd < best_rd {
           best_rd = rd;
           best_mode_luma = luma_mode;
+          best_tx_type = tx_type;
           best_mode_chroma = chroma_mode;
           best_cfl_params = cfl;
           best_ref_frame = ref_frame;
@@ -344,6 +347,7 @@ pub fn rdo_mode_decision(
     part_modes: vec![RDOPartitionOutput {
       bo: bo.clone(),
       pred_mode_luma: best_mode_luma,
+      tx_type: best_tx_type,
       pred_mode_chroma: best_mode_chroma,
       pred_cfl_params: best_cfl_params,
       ref_frame: best_ref_frame,

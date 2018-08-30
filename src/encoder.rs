@@ -1573,6 +1573,16 @@ pub fn write_tx_tree(fi: &FrameInvariants, fs: &mut FrameState, cw: &mut Context
     }
 }
 
+fn tx_mode_largest(bsize: BlockSize) -> TxSize {
+  // these rules follow TX_MODE_LARGEST
+  match bsize {
+      BlockSize::BLOCK_4X4 => TxSize::TX_4X4,
+      BlockSize::BLOCK_8X8 => TxSize::TX_8X8,
+      BlockSize::BLOCK_16X16 => TxSize::TX_16X16,
+      _ => TxSize::TX_32X32
+  }
+}
+
 fn encode_partition_bottomup(seq: &Sequence, fi: &FrameInvariants, fs: &mut FrameState,
                              cw: &mut ContextWriter, w_pre_cdef: &mut dyn Writer, w_post_cdef: &mut dyn Writer,
                              bsize: BlockSize, bo: &BlockOffset) -> f64 {
@@ -1597,6 +1607,7 @@ fn encode_partition_bottomup(seq: &Sequence, fi: &FrameInvariants, fs: &mut Fram
         rd_cost,
         bo: bo.clone(),
         pred_mode_luma: PredictionMode::DC_PRED,
+        tx_type: TxType::DCT_DCT,
         pred_mode_chroma: PredictionMode::DC_PRED,
         pred_cfl_params: CFLParams::new(),
         ref_frame: INTRA_FRAME,
@@ -1628,8 +1639,7 @@ fn encode_partition_bottomup(seq: &Sequence, fi: &FrameInvariants, fs: &mut Fram
         let mut cdef_coded = cw.bc.cdef_coded;
         rd_cost = mode_decision.rd_cost;
 
-        let (tx_size, tx_type) =
-          rdo_tx_size_type(seq, fi, fs, cw, bsize, bo, mode_luma, ref_frame, mv, skip);
+        let (tx_size, tx_type) = (tx_mode_largest(bsize), mode_decision.tx_type);
 
         cdef_coded = encode_block_a(seq, cw, if cdef_coded  {w_post_cdef} else {w_pre_cdef},
                                    bsize, bo, skip);
@@ -1686,8 +1696,7 @@ fn encode_partition_bottomup(seq: &Sequence, fi: &FrameInvariants, fs: &mut Fram
             let skip = best_decision.skip;
             let mut cdef_coded = cw.bc.cdef_coded;
 
-            let (tx_size, tx_type) =
-                rdo_tx_size_type(seq, fi, fs, cw, bsize, bo, mode_luma, ref_frame, mv, skip);
+            let (tx_size, tx_type) = (tx_mode_largest(bsize), best_decision.tx_type);
 
             cdef_coded = encode_block_a(seq, cw, if cdef_coded {w_post_cdef} else {w_pre_cdef},
                                        bsize, bo, skip);
@@ -1770,8 +1779,7 @@ fn encode_partition_topdown(seq: &Sequence, fi: &FrameInvariants, fs: &mut Frame
             let mv = part_decision.mv;
             let mut cdef_coded = cw.bc.cdef_coded;
 
-            let (tx_size, tx_type) =
-                rdo_tx_size_type(seq, fi, fs, cw, bsize, bo, mode_luma, ref_frame, mv, skip);
+            let (tx_size, tx_type) = (tx_mode_largest(bsize), part_decision.tx_type);
 
             // FIXME: every final block that has gone through the RDO decision process is encoded twice
             cdef_coded = encode_block_a(seq, cw, if cdef_coded  {w_post_cdef} else {w_pre_cdef},
