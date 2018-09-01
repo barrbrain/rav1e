@@ -20,6 +20,7 @@ use rav1e::context::*;
 use rav1e::ec;
 use rav1e::partition::*;
 use rav1e::predict::*;
+use rav1e::rdo::rdo_cfl_alpha;
 
 #[cfg(feature = "comparative_bench")]
 mod comparative;
@@ -90,10 +91,33 @@ fn write_b_bench(b: &mut Bencher, tx_size: TxSize, qindex: usize) {
   });
 }
 
+fn cfl_rdo(c: &mut Criterion) {
+  for &bsize in &[
+    BlockSize::BLOCK_4X4,
+    BlockSize::BLOCK_8X8,
+    BlockSize::BLOCK_16X16,
+    BlockSize::BLOCK_32X32
+  ] {
+    let n = format!("cfl_rdo({:?})", bsize);
+    c.bench_function(&n, move |b| cfl_rdo_bench(b, bsize));
+  }
+}
+
 criterion_group!(
   intra_prediction,
   predict::pred_bench,
 );
+
+fn cfl_rdo_bench(b: &mut Bencher, bsize: BlockSize) {
+  let config =
+    EncoderConfig { quantizer: 100, speed: 10, ..Default::default() };
+  let fi = FrameInvariants::new(1024, 1024, config);
+  let mut fs = FrameState::new(&fi);
+  let offset = BlockOffset { x: 1, y: 1 };
+  b.iter(|| rdo_cfl_alpha(&mut fs, &offset, bsize, 8))
+}
+
+criterion_group!(cfl, cfl_rdo);
 
 criterion_group!(write_block, write_b);
 
@@ -101,4 +125,4 @@ criterion_group!(write_block, write_b);
 criterion_main!(comparative::intra_prediction);
 
 #[cfg(not(feature = "comparative_bench"))]
-criterion_main!(write_block, intra_prediction);
+criterion_main!(write_block, intra_prediction, cfl);
