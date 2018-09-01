@@ -385,7 +385,7 @@ pub fn rdo_cfl_alpha(
       let input = &fs.input.planes[p];
       let po = bo.plane_offset(&fs.input.planes[p].cfg);
       (-16i16..17i16)
-        .max_by_key(|&alpha| {
+        .min_by_key(|&alpha| {
           PredictionMode::UV_CFL_PRED.predict_intra(
             &mut rec.mut_slice(&po),
             uv_tx_size,
