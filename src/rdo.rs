@@ -303,7 +303,12 @@ pub fn rdo_mode_decision(
           fi, fs, cw, wr, luma_mode, luma_mode, bo, bsize, tx_size, tx_type, false, seq.bit_depth, cfl, true
         );
         cw.rollback(&cw_checkpoint);
-        cfl = rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth);
+        match rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth) {
+          Some(params) => {
+            cfl = params;
+          }
+          None => continue
+        }
       }
 
       for &skip in &[false, true] {
@@ -368,7 +373,7 @@ pub fn rdo_mode_decision(
 
 pub fn rdo_cfl_alpha(
   fs: &mut FrameState, bo: &BlockOffset, bsize: BlockSize, bit_depth: usize
-) -> CFLParams {
+) -> Option<CFLParams> {
   // TODO: these are only valid for 4:2:0
   let uv_tx_size = match bsize {
     BlockSize::BLOCK_4X4 | BlockSize::BLOCK_8X8 => TxSize::TX_4X4,
@@ -403,9 +408,9 @@ pub fn rdo_cfl_alpha(
     }).collect();
 
   if best_alpha[0] == 0 && best_alpha[1] == 0 {
-    CFLParams::new()
+    None
   } else {
-    CFLParams::from_alpha(best_alpha[0], best_alpha[1])
+    Some(CFLParams::from_alpha(best_alpha[0], best_alpha[1]))
   }
 }
 
