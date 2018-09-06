@@ -277,7 +277,7 @@ pub fn rdo_mode_decision(
     }
 
     let y_po = bo.plane_offset(&fs.input.planes[0].cfg);
-    let fs = &mut fs.window(y_po.x as usize, y_po.y as usize);
+    let fs = &mut fs.clone();
 
     let ref_frame = if luma_mode.is_intra() { INTRA_FRAME } else { LAST_FRAME };
     let mv = match luma_mode {
