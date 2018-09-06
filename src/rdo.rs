@@ -288,6 +288,8 @@ pub fn rdo_mode_decision(
 
     // Find the best chroma prediction mode for the current luma prediction mode
     for &chroma_mode in &mode_set_chroma {
+      let y_po = bo.plane_offset(&fs.input.planes[0].cfg);
+      let fs = &mut fs.window(y_po.x as usize, y_po.y as usize);
       let mut cfl = CFLParams::new();
       if chroma_mode == PredictionMode::UV_CFL_PRED {
         if !best_mode_chroma.is_intra() {

@@ -43,6 +43,16 @@ impl Frame {
             p.pad();
         }
     }
+
+    pub fn window(&self, x: usize, y: usize) -> Frame {
+        Frame {
+            planes: [
+                self.planes[0].window(x, y),
+                self.planes[1].window(x, y),
+                self.planes[2].window(x, y)
+            ]
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -241,6 +251,15 @@ impl FrameState {
             rec: Frame::new(fi.padded_w, fi.padded_h),
             qc: Default::default(),
             cdfs: CDFContext::new(0),
+        }
+    }
+
+    pub fn window(&self, x: usize, y: usize) -> FrameState {
+        FrameState {
+            input: self.input.window(x, y),
+            rec: self.rec.window(x, y),
+            qc: self.qc.clone(),
+            cdfs: self.cdfs.clone()
         }
     }
 }
