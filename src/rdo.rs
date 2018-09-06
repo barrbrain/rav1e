@@ -226,7 +226,7 @@ pub fn rdo_tx_size_type(seq: &Sequence, fi: &FrameInvariants,
 
 // RDO-based mode decision
 pub fn rdo_mode_decision(
-  seq: &Sequence, fi: &FrameInvariants, fs: &mut FrameState, cw: &mut ContextWriter,
+  seq: &Sequence, fi: &FrameInvariants, fs: &FrameState, cw: &mut ContextWriter,
   bsize: BlockSize, bo: &BlockOffset) -> RDOOutput {
   let mut best_mode_luma = PredictionMode::DC_PRED;
   let mut best_mode_chroma = PredictionMode::DC_PRED;
@@ -276,6 +276,9 @@ pub fn rdo_mode_decision(
       mode_set_chroma.push(PredictionMode::UV_CFL_PRED);
     }
 
+    let y_po = bo.plane_offset(&fs.input.planes[0].cfg);
+    let fs = &mut fs.window(y_po.x as usize, y_po.y as usize);
+
     let ref_frame = if luma_mode.is_intra() { INTRA_FRAME } else { LAST_FRAME };
     let mv = match luma_mode {
       PredictionMode::NEWMV => motion_estimation(fi, fs, bsize, bo, ref_frame),
@@ -288,8 +291,7 @@ pub fn rdo_mode_decision(
 
     // Find the best chroma prediction mode for the current luma prediction mode
     for &chroma_mode in &mode_set_chroma {
-      let y_po = bo.plane_offset(&fs.input.planes[0].cfg);
-      let fs = &mut fs.window(y_po.x as usize, y_po.y as usize);
+      let fs = &mut fs.clone();
       let mut cfl = CFLParams::new();
       if chroma_mode == PredictionMode::UV_CFL_PRED {
         if !best_mode_chroma.is_intra() {

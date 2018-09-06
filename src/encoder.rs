@@ -236,7 +236,7 @@ impl Sequence {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FrameState {
     pub input: Frame,
     pub rec: Frame,
