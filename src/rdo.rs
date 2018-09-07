@@ -232,7 +232,7 @@ use rayon::prelude::*;
 
 // RDO-based mode decision
 pub fn rdo_mode_decision(
-  seq: &Sequence, fi: &FrameInvariants, fs: &mut FrameState, cw: &mut ContextWriter,
+  seq: &Sequence, fi: &FrameInvariants, fs: &FrameState, cw: &mut ContextWriter,
   bsize: BlockSize, bo: &BlockOffset) -> RDOOutput {
   let mut best_mode_luma = PredictionMode::DC_PRED;
   let mut best_mode_chroma = PredictionMode::DC_PRED;
@@ -284,6 +284,7 @@ pub fn rdo_mode_decision(
       mode_set_chroma.push(PredictionMode::UV_CFL_PRED);
     }
 
+    let fs = &mut fs.window(&bo.sb_offset());
     let ref_frame = if luma_mode.is_intra() { INTRA_FRAME } else { LAST_FRAME };
     let mv = match luma_mode {
       PredictionMode::NEWMV => motion_estimation(fi, fs, bsize, bo, ref_frame),
