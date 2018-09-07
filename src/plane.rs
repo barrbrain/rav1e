@@ -60,7 +60,10 @@ impl Plane {
   }
 
   pub fn window(&self, po: &PlaneOffset) -> Plane {
-    assert!(self.cfg.xorigin >= 0 && self.cfg.yorigin >= 0);
+    if self.cfg.xorigin < 0 || self.cfg.yorigin < 0 {
+      // TODO: check the bounds; this enables repeated calls
+      return self.clone();
+    }
     let x = po.x as usize;
     let y = po.y as usize;
     let xpad = self.cfg.xorigin as usize;

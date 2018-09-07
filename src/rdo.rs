@@ -234,13 +234,6 @@ use rayon::prelude::*;
 pub fn rdo_mode_decision(
   seq: &Sequence, fi: &FrameInvariants, fs: &FrameState, cw: &mut ContextWriter,
   bsize: BlockSize, bo: &BlockOffset) -> RDOOutput {
-  let mut best_mode_luma = PredictionMode::DC_PRED;
-  let mut best_mode_chroma = PredictionMode::DC_PRED;
-  let mut best_cfl_params = CFLParams::new();
-  let mut best_skip = false;
-  let mut best_rd = std::f64::MAX;
-  let mut best_ref_frame = INTRA_FRAME;
-  let mut best_mv = MotionVector { row: 0, col: 0 };
 
   // Get block luma and chroma dimensions
   let w = bsize.width();
@@ -271,7 +264,7 @@ pub fn rdo_mode_decision(
 
 //  for &luma_mode in &mode_set {
 //  mode_set.par_iter().for_each(|&luma_mode| {
-  mode_set.iter().for_each(|&luma_mode| {
+  let best = mode_set.par_iter().map(|&luma_mode| {
     assert!(fi.frame_type == FrameType::INTER || luma_mode.is_intra());
 
     let mut mode_set_chroma = vec![ luma_mode ];
@@ -285,6 +278,7 @@ pub fn rdo_mode_decision(
     }
 
     let fs = &mut fs.window(&bo.sb_offset());
+    let cw = &mut cw.clone();
     let ref_frame = if luma_mode.is_intra() { INTRA_FRAME } else { LAST_FRAME };
     let mv = match luma_mode {
       PredictionMode::NEWMV => motion_estimation(fi, fs, bsize, bo, ref_frame),
@@ -303,7 +297,7 @@ pub fn rdo_mode_decision(
     };
 
     // Find the best chroma prediction mode for the current luma prediction mode
-    let best = mode_set_chroma.iter().flat_map(|chroma_mode| {
+    mode_set_chroma.iter().flat_map(|chroma_mode| {
       skip_modes.iter().map(|skip| (chroma_mode.clone(), skip.clone())).collect::<Vec<_>>()
     }).collect::<Vec<_>>().par_iter().map(|&(chroma_mode, skip)| {
       let fs = &mut fs.clone();
@@ -341,17 +335,16 @@ pub fn rdo_mode_decision(
       );
 
       (rd, luma_mode, chroma_mode, cfl, ref_frame, mv, skip)
-    }).min_by(|a, b| a.0.partial_cmp(&b.0).unwrap()).unwrap();
-    if best.0 < best_rd {
-      best_rd = best.0;
-      best_mode_luma = best.1;
-      best_mode_chroma = best.2;
-      best_cfl_params = best.3;
-      best_ref_frame = best.4;
-      best_mv = best.5;
-      best_skip = best.6;
-    }
-  });
+    }).min_by(|a, b| a.0.partial_cmp(&b.0).unwrap()).unwrap()
+  }).min_by(|a, b| a.0.partial_cmp(&b.0).unwrap()).unwrap();
+
+  let best_rd = best.0;
+  let best_mode_luma = best.1;
+  let best_mode_chroma = best.2;
+  let best_cfl_params = best.3;
+  let best_ref_frame = best.4;
+  let best_mv = best.5;
+  let best_skip = best.6;
 
   cw.rollback(&cw_checkpoint);
   cw.bc.set_mode(bo, bsize, best_mode_luma);
@@ -534,30 +527,19 @@ pub fn rdo_partition_decision(
         let bs = bsize.width_mi();
         let hbs = bs >> 1; // Half the block size in blocks
 
-        let offset = BlockOffset { x: bo.x, y: bo.y };
-        let mode_decision = rdo_mode_decision(seq, fi, fs, cw, subsize, &offset)
-          .part_modes[0]
-          .clone();
-        child_modes.push(mode_decision);
+        let fs = &fs.window(&bo.sb_offset());
+        let offsets = vec![
+          BlockOffset { x: bo.x, y: bo.y },
+          BlockOffset { x: bo.x + hbs as usize, y: bo.y },
+          BlockOffset { x: bo.x, y: bo.y + hbs as usize },
+          BlockOffset { x: bo.x + hbs as usize, y: bo.y + hbs as usize }
+        ];
 
-        let offset = BlockOffset { x: bo.x + hbs as usize, y: bo.y };
-        let mode_decision = rdo_mode_decision(seq, fi, fs, cw, subsize, &offset)
+        child_modes = offsets.par_iter().map(|offset| {
+          rdo_mode_decision(seq, fi, fs, &mut cw.clone(), subsize, &offset)
           .part_modes[0]
-          .clone();
-        child_modes.push(mode_decision);
-
-        let offset = BlockOffset { x: bo.x, y: bo.y + hbs as usize };
-        let mode_decision = rdo_mode_decision(seq, fi, fs, cw, subsize, &offset)
-          .part_modes[0]
-          .clone();
-        child_modes.push(mode_decision);
-
-        let offset =
-          BlockOffset { x: bo.x + hbs as usize, y: bo.y + hbs as usize };
-        let mode_decision = rdo_mode_decision(seq, fi, fs, cw, subsize, &offset)
-          .part_modes[0]
-          .clone();
-        child_modes.push(mode_decision);
+          .clone()
+        }).collect::<Vec<_>>();
       }
       _ => {
         assert!(false);
