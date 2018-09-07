@@ -340,10 +340,9 @@ pub fn rdo_mode_decision(
         false
       );
 
-      cw.rollback(&cw_checkpoint);
-
       (rd, luma_mode, chroma_mode, cfl, ref_frame, mv, skip)
-    }).max_by(|a, b| a.0.partial_cmp(&b.0).unwrap()).unwrap();
+    }).min_by(|a, b| a.0.partial_cmp(&b.0).unwrap()).unwrap();
+    if best.0 < best_rd {
       best_rd = best.0;
       best_mode_luma = best.1;
       best_mode_chroma = best.2;
@@ -351,8 +350,10 @@ pub fn rdo_mode_decision(
       best_ref_frame = best.4;
       best_mv = best.5;
       best_skip = best.6;
+    }
   });
 
+  cw.rollback(&cw_checkpoint);
   cw.bc.set_mode(bo, bsize, best_mode_luma);
   cw.bc.set_motion_vector(bo, bsize, best_mv);
 
