@@ -268,8 +268,6 @@ pub fn rdo_mode_decision(
   let PlaneConfig { xdec, ydec, .. } = fs.input.planes[1].cfg;
   let is_chroma_block = has_chroma(bo, bsize, xdec, ydec);
 
-  let cw_checkpoint = cw.checkpoint();
-
   // Exclude complex prediction modes at higher speed levels
   let intra_mode_set = if (fi.frame_type == FrameType::KEY
     && fi.config.speed <= 3)
@@ -357,6 +355,7 @@ pub fn rdo_mode_decision(
         }
       }
 
+      let cw_checkpoint = cw.checkpoint();
       for &skip in &[false, true] {
         // Don't skip when using intra modes
         if skip && luma_mode.is_intra() {
