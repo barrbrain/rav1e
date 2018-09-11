@@ -289,6 +289,7 @@ pub fn rdo_mode_decision(
   let mode_context =
     cw.find_mvrefs(bo, LAST_FRAME, &mut mv_stack, bsize, false);
 
+  let cw_checkpoint = cw.checkpoint();
   for &luma_mode in &mode_set {
     assert!(fi.frame_type == FrameType::INTER || luma_mode.is_intra());
 
@@ -413,6 +414,7 @@ pub fn rdo_mode_decision(
         cw.rollback(&cw_checkpoint);
       }
     }
+    cw.rollback(&cw_checkpoint);
   }
 
   cw.bc.set_mode(bo, bsize, best_mode_luma);
