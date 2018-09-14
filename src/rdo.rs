@@ -434,7 +434,7 @@ pub fn rdo_mode_decision(
         bo,
         best_skip,
         seq.bit_depth,
-        CFLParams::new(),
+        cfl,
         best_tx_size,
         best_tx_type,
         mode_context,
