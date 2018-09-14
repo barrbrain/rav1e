@@ -292,7 +292,8 @@ pub fn rdo_mode_decision(
   let mode_context =
     cw.find_mvrefs(bo, LAST_FRAME, &mut mv_stack, bsize, false);
 
-  let cfl_params = rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth);
+  let mut cfl_params = None::<CFLParams>;
+  let mut have_cfl = false;
 
   for &luma_mode in &mode_set {
     let luma_mode_is_intra = luma_mode.is_intra();
@@ -307,7 +308,7 @@ pub fn rdo_mode_decision(
       if luma_mode != PredictionMode::DC_PRED {
         mode_set_chroma.push(PredictionMode::DC_PRED);
       }
-      if bsize.cfl_allowed() && cfl_params.is_some() {
+      if bsize.cfl_allowed() {
         mode_set_chroma.push(PredictionMode::UV_CFL_PRED);
       }
     }
@@ -339,6 +340,13 @@ pub fn rdo_mode_decision(
     for &chroma_mode in &mode_set_chroma {
       if chroma_mode == PredictionMode::UV_CFL_PRED {
         if !best_mode_chroma.is_intra() {
+          continue;
+        }
+        if !have_cfl {
+          have_cfl = true;
+          cfl_params = rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth);
+        }
+        if cfl_params.is_none() {
           continue;
         }
       }
