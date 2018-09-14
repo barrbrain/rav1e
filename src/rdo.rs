@@ -337,6 +337,11 @@ pub fn rdo_mode_decision(
 
     // Find the best chroma prediction mode for the current luma prediction mode
     for &chroma_mode in &mode_set_chroma {
+      if chroma_mode == PredictionMode::UV_CFL_PRED {
+        if !best_mode_chroma.is_intra() {
+          continue;
+        }
+      }
       for &skip in &[false, true] {
         // Don't skip when using intra modes
         if skip && luma_mode_is_intra {
