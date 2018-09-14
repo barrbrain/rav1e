@@ -292,6 +292,8 @@ pub fn rdo_mode_decision(
   let mode_context =
     cw.find_mvrefs(bo, LAST_FRAME, &mut mv_stack, bsize, false);
 
+  let cfl_params = rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth);
+
   for &luma_mode in &mode_set {
     let luma_mode_is_intra = luma_mode.is_intra();
     assert!(fi.frame_type == FrameType::INTER || luma_mode_is_intra);
@@ -305,7 +307,7 @@ pub fn rdo_mode_decision(
       if luma_mode != PredictionMode::DC_PRED {
         mode_set_chroma.push(PredictionMode::DC_PRED);
       }
-      if bsize.cfl_allowed() {
+      if bsize.cfl_allowed() && cfl_params.is_some() {
         mode_set_chroma.push(PredictionMode::UV_CFL_PRED);
       }
     }
@@ -335,43 +337,13 @@ pub fn rdo_mode_decision(
 
     // Find the best chroma prediction mode for the current luma prediction mode
     for &chroma_mode in &mode_set_chroma {
-      let mut cfl = CFLParams::new();
-      if chroma_mode == PredictionMode::UV_CFL_PRED {
-        if !best_mode_chroma.is_intra() {
-          continue;
-        }
-        let cw_checkpoint = cw.checkpoint();
-        let mut wr: &mut dyn Writer = &mut WriterCounter::new();
-        write_tx_blocks(
-          fi,
-          fs,
-          cw,
-          wr,
-          luma_mode,
-          luma_mode,
-          bo,
-          bsize,
-          tx_size,
-          tx_type,
-          false,
-          seq.bit_depth,
-          cfl,
-          true
-        );
-        cw.rollback(&cw_checkpoint);
-        match rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth) {
-          Some(params) => {
-            cfl = params;
-          }
-          None => continue
-        }
-      }
-
       for &skip in &[false, true] {
         // Don't skip when using intra modes
         if skip && luma_mode_is_intra {
           continue;
         }
+
+        let cfl = cfl_params.unwrap_or_else(CFLParams::new);
 
         let mut wr: &mut dyn Writer = &mut WriterCounter::new();
         let tell = wr.tell_frac();
@@ -459,7 +431,7 @@ pub fn rdo_cfl_alpha(
   };
 
   let mut ac = [0i16; 32 * 32];
-  luma_ac(&mut ac, fs, bo, bsize);
+  luma_ac(&mut ac, &fs.input, bo, bsize);
   let best_alpha: Vec<i16> = (1..3)
     .map(|p| {
       let rec = &mut fs.rec.planes[p];

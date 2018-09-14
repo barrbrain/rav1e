@@ -1448,16 +1448,16 @@ pub fn encode_block_b(seq: &Sequence, fi: &FrameInvariants, fs: &mut FrameState,
 }
 
 pub fn luma_ac(
-  ac: &mut [i16], fs: &mut FrameState, bo: &BlockOffset, bsize: BlockSize
+  ac: &mut [i16], frame: &Frame, bo: &BlockOffset, bsize: BlockSize
 ) {
-  let PlaneConfig { xdec, ydec, .. } = fs.input.planes[1].cfg;
+  let PlaneConfig { xdec, ydec, .. } = frame.planes[1].cfg;
   let plane_bsize = get_plane_block_size(bsize, xdec, ydec);
   let po = if bsize.is_sub8x8() {
-    bo.with_offset(-1, -1).plane_offset(&fs.input.planes[0].cfg)
+    bo.with_offset(-1, -1).plane_offset(&frame.planes[0].cfg)
   } else {
-    bo.plane_offset(&fs.input.planes[0].cfg)
+    bo.plane_offset(&frame.planes[0].cfg)
   };
-  let rec = &fs.rec.planes[0];
+  let rec = &frame.planes[0];
   let luma = &rec.slice(&po);
 
   let mut sum: i32 = 0;
@@ -1535,7 +1535,7 @@ pub fn write_tx_blocks(fi: &FrameInvariants, fs: &mut FrameState,
     let plane_bsize = get_plane_block_size(bsize, xdec, ydec);
 
     if chroma_mode.is_cfl() {
-      luma_ac(ac, fs, bo, bsize);
+      luma_ac(ac, &fs.rec, bo, bsize);
     }
 
     if bw_uv > 0 && bh_uv > 0 {
