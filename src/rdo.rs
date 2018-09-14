@@ -328,18 +328,18 @@ pub fn rdo_mode_decision(
       _ => MotionVector { row: 0, col: 0 }
     };
 
-    let (tx_size, tx_type) = rdo_tx_size_type(
-      seq, fi, fs, cw, bsize, bo, luma_mode, ref_frame, mv, false,
-    );
+    for &skip in &[false, true] {
+      // Don't skip when using intra modes
+      if skip && luma_mode_is_intra {
+        continue;
+      }
 
-    // Find the best chroma prediction mode for the current luma prediction mode
-    for &chroma_mode in &mode_set_chroma {
-      for &skip in &[false, true] {
-        // Don't skip when using intra modes
-        if skip && luma_mode_is_intra {
-          continue;
-        }
+      let (tx_size, tx_type) = rdo_tx_size_type(
+        seq, fi, fs, cw, bsize, bo, luma_mode, ref_frame, mv, skip,
+      );
 
+      // Find the best chroma prediction mode for the current luma prediction mode
+      for &chroma_mode in &mode_set_chroma {
         let mut wr: &mut dyn Writer = &mut WriterCounter::new();
         let tell = wr.tell_frac();
 
