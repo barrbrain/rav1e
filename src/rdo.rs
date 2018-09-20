@@ -442,7 +442,7 @@ pub fn rdo_mode_decision(
       true
     );
     cw.rollback(&cw_checkpoint);
-    if let Some(cfl) = rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth) {
+    if let Some(cfl) = rdo_cfl_alpha(fi, fs, bo, bsize, seq.bit_depth) {
       let mut wr: &mut dyn Writer = &mut WriterCounter::new();
       let tell = wr.tell_frac();
 
@@ -513,7 +513,8 @@ pub fn rdo_mode_decision(
 }
 
 pub fn rdo_cfl_alpha(
-  fs: &mut FrameState, bo: &BlockOffset, bsize: BlockSize, bit_depth: usize
+  fi: &FrameInvariants, fs: &mut FrameState, bo: &BlockOffset, bsize: BlockSize,
+  bit_depth: usize
 ) -> Option<CFLParams> {
   // TODO: these are only valid for 4:2:0
   let uv_tx_size = match bsize {
@@ -521,6 +522,11 @@ pub fn rdo_cfl_alpha(
     BlockSize::BLOCK_16X16 => TxSize::TX_8X8,
     BlockSize::BLOCK_32X32 => TxSize::TX_16X16,
     _ => TxSize::TX_32X32
+  };
+
+  let lambda = get_lambda(fi, bit_depth);
+  let rate = |alpha: i16| -> f64 {
+    if alpha.abs() == 16 { 7f64 } else { alpha.abs() as f64 * 0.75 }
   };
 
   let mut ac = [0i16; 32 * 32];
@@ -544,7 +550,7 @@ pub fn rdo_cfl_alpha(
             &rec.slice(&po),
             uv_tx_size.width(),
             uv_tx_size.height()
-          )
+          ) + (lambda * rate(alpha)) as u64
         }).unwrap()
     }).collect();
 
