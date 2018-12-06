@@ -605,32 +605,34 @@ pub fn rdo_mode_decision(
   if best.mode_luma.is_intra() && is_chroma_block && bsize.cfl_allowed() {
     let chroma_mode = PredictionMode::UV_CFL_PRED;
     let cw_checkpoint = cw.checkpoint();
-    let wr: &mut dyn Writer = &mut WriterCounter::new();
-    write_tx_blocks(
-      fi,
-      fs,
-      cw,
-      wr,
-      best.mode_luma,
-      best.mode_luma,
-      bo,
-      bsize,
-      best.tx_size,
-      best.tx_type,
-      false,
-      seq.bit_depth,
-      seq.chroma_sampling,
-      CFLParams::new(),
-      true,
-      false
-    );
-    cw.rollback(&cw_checkpoint);
-    if let Some(cfl) = rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth, seq.chroma_sampling) {
+    if needs_rec {
+      let wr: &mut dyn Writer = &mut WriterCounter::new();
+      write_tx_blocks(
+        fi,
+        fs,
+        cw,
+        wr,
+        best.mode_luma,
+        best.mode_luma,
+        bo,
+        bsize,
+        best.tx_size,
+        best.tx_type,
+        false,
+        seq.bit_depth,
+        seq.chroma_sampling,
+        CFLParams::new(),
+        true,
+        false
+      );
+      cw.rollback(&cw_checkpoint);
+    }
+    if let Some(cfl) = rdo_cfl_alpha(fs, bo, bsize, seq.bit_depth, seq.chroma_sampling, !needs_rec) {
       let mut wr: &mut dyn Writer = &mut WriterCounter::new();
       let tell = wr.tell_frac();
 
       encode_block_a(seq, fs, cw, wr, bsize, bo, best.skip);
-      encode_block_b(
+      let tx_dist = encode_block_b(
         seq,
         fi,
         fs,
@@ -649,13 +651,25 @@ pub fn rdo_mode_decision(
         best.tx_type,
         0,
         &Vec::new(),
-        false // For CFL, luma should be always reconstructed.
+        !needs_rec
       );
 
       let cost = wr.tell_frac() - tell;
-
-      // For CFL, tx-domain distortion is not an option.
-      let rd =
+      let rd = if fi.use_tx_domain_distortion && !needs_rec {
+        compute_tx_rd_cost(
+          fi,
+          fs,
+          w,
+          h,
+          is_chroma_block,
+          bo,
+          cost,
+          tx_dist,
+          seq.bit_depth,
+          best.skip,
+          false
+        )
+      } else {
         compute_rd_cost(
           fi,
           fs,
@@ -666,7 +680,8 @@ pub fn rdo_mode_decision(
           cost,
           seq.bit_depth,
           false
-        );
+        )
+      };
 
       if rd < best.rd {
         best.rd = rd;
@@ -704,11 +719,11 @@ pub fn rdo_mode_decision(
 
 pub fn rdo_cfl_alpha(
   fs: &mut FrameState, bo: &BlockOffset, bsize: BlockSize, bit_depth: usize,
-  chroma_sampling: ChromaSampling) -> Option<CFLParams> {
+  chroma_sampling: ChromaSampling, for_rdo_use: bool) -> Option<CFLParams> {
   let uv_tx_size = bsize.largest_uv_tx_size(chroma_sampling);
 
   let mut ac = [0i16; 32 * 32];
-  luma_ac(&mut ac, fs, bo, bsize);
+  luma_ac(&mut ac, fs, bo, bsize, for_rdo_use);
   let best_alpha: Vec<i16> = (1..3)
     .map(|p| {
       let rec = &mut fs.rec.planes[p];
