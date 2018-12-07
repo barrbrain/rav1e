@@ -583,6 +583,7 @@ impl FrameInvariants {
         }
         let use_reduced_tx_set = config.speed_settings.reduced_tx_set;
         let use_tx_domain_distortion = config.tune == Tune::Psnr && config.speed_settings.tx_domain_distortion;
+        let uv_delta_q = -((config.quantizer >> 3) as i8);
 
         FrameInvariants {
             width,
@@ -632,8 +633,8 @@ impl FrameInvariants {
             ref_frame_sign_bias: [false; INTER_REFS_PER_FRAME],
             rec_buffer: ReferenceFramesSet::new(),
             base_q_idx: config.quantizer as u8,
-            dc_delta_q: [0; 3],
-            ac_delta_q: [0; 3],
+            dc_delta_q: [0, uv_delta_q, uv_delta_q],
+            ac_delta_q: [0, uv_delta_q, uv_delta_q],
             me_range_scale: 1,
             use_tx_domain_distortion: use_tx_domain_distortion,
             inter_cfg: None,
