@@ -106,6 +106,11 @@ pub fn parse_cli() -> CliOptions {
       Arg::with_name("PSNR")
         .help("calculate and display PSNR metrics")
         .long("psnr")
+    ).arg(
+      Arg::with_name("UV_DELTA_Q")
+        .help("Quantizer offset for chroma planes")
+        .long("uv_delta_q")
+        .default_value("0")
     ).get_matches();
 
   let io = EncoderIO {
@@ -133,6 +138,7 @@ pub fn parse_cli() -> CliOptions {
 fn parse_config(matches: &ArgMatches) -> EncoderConfig {
   let speed = matches.value_of("SPEED").unwrap().parse().unwrap();
   let quantizer = matches.value_of("QP").unwrap().parse().unwrap();
+  let uv_delta_q = matches.value_of("UV_DELTA_Q").unwrap().parse().unwrap();
   let min_interval = matches.value_of("MIN_KEYFRAME_INTERVAL").unwrap().parse().unwrap();
   let max_interval = matches.value_of("KEYFRAME_INTERVAL").unwrap().parse().unwrap();
 
@@ -151,6 +157,7 @@ fn parse_config(matches: &ArgMatches) -> EncoderConfig {
   cfg.low_latency = matches.value_of("LOW_LATENCY").unwrap().parse().unwrap();
   cfg.tune = matches.value_of("TUNE").unwrap().parse().unwrap();
   cfg.quantizer = quantizer;
+  cfg.uv_delta_q = uv_delta_q;
   cfg.show_psnr = matches.is_present("PSNR");
 
   cfg
