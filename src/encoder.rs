@@ -653,6 +653,9 @@ impl FrameInvariants {
     fi.frame_to_show_map_idx = 0;
     let q_boost = 15;
     fi.base_q_idx = (fi.config.quantizer.max(1 + q_boost).min(255 + q_boost) - q_boost) as u8;
+    let uv_delta_q = -(((fi.base_q_idx * 3) >> 4) as i8);
+    fi.dc_delta_q = [0, uv_delta_q, uv_delta_q];
+    fi.ac_delta_q = [0, uv_delta_q, uv_delta_q];
     fi.primary_ref_frame = PRIMARY_REF_NONE;
     fi.number = segment_start_frame;
     for i in 0..INTER_REFS_PER_FRAME {
@@ -745,6 +748,9 @@ impl FrameInvariants {
 
     let q_drop = 15 * lvl as usize;
     fi.base_q_idx = (fi.config.quantizer.min(255 - q_drop) + q_drop) as u8;
+    let uv_delta_q = -(((fi.base_q_idx * 3) >> 4) as i8);
+    fi.dc_delta_q = [0, uv_delta_q, uv_delta_q];
+    fi.ac_delta_q = [0, uv_delta_q, uv_delta_q];
 
     let second_ref_frame = if !inter_cfg.multiref {
       NONE_FRAME
