@@ -74,10 +74,16 @@ pub fn parse_cli() -> CliOptions {
         .default_value("0")
     ).arg(
       Arg::with_name("QP")
-        .help("Quantizer (0-255)")
+        .help("Quantizer (0-255), smaller values are higher quality [default: 100]")
         .long("quantizer")
         .takes_value(true)
         .default_value("100")
+    ).arg(
+      Arg::with_name("BITRATE")
+        .help("Bitrate (kbps)")
+        .short("b")
+        .long("bitrate")
+        .takes_value(true)
     ).arg(
       Arg::with_name("SPEED")
         .help("Speed level (0(slow)-10(fast))")
@@ -187,18 +193,31 @@ pub fn parse_cli() -> CliOptions {
 
 fn parse_config(matches: &ArgMatches<'_>) -> EncoderConfig {
   let speed = matches.value_of("SPEED").unwrap().parse().unwrap();
-  let quantizer = matches.value_of("QP").unwrap().parse().unwrap();
+  let maybe_quantizer = matches.value_of("QP").map(|qp| qp.parse().unwrap());
+  let maybe_bitrate =
+    matches.value_of("BITRATE").map(|bitrate| bitrate.parse().unwrap());
   let max_interval: u64 = matches.value_of("KEYFRAME_INTERVAL").unwrap().parse().unwrap();
   let mut min_interval: u64 = matches.value_of("MIN_KEYFRAME_INTERVAL").unwrap().parse().unwrap();
 
   if matches.occurrences_of("MIN_KEYFRAME_INTERVAL") == 0 {
     min_interval = min_interval.min(max_interval);
   }
+  let quantizer = maybe_quantizer.unwrap_or_else(|| {
+    if maybe_bitrate.is_some() {
+      // If a bitrate is specified, the quantizer is the maximum allowed (e.g.,
+      //  the minimum quality allowed), which by default should be
+      //  unconstrained.
+      256
+    } else {
+      100
+    }
+  });
+  let bitrate = maybe_bitrate.unwrap_or(0);
 
   // Validate arguments
   if quantizer == 0 {
     unimplemented!("Lossless encoding not yet implemented");
-  } else if quantizer > 255 || speed > 10 {
+  } else if maybe_quantizer.is_some() && quantizer > 255 || speed > 10 {
     panic!("argument out of range");
   } else if min_interval > max_interval {
     panic!("Maximum keyframe interval must be greater than or equal to minimum keyframe interval");
@@ -237,6 +256,7 @@ fn parse_config(matches: &ArgMatches<'_>) -> EncoderConfig {
       })
     };
   cfg.quantizer = quantizer;
+  cfg.bitrate = bitrate;
   cfg.show_psnr = matches.is_present("PSNR");
   cfg.pass = matches.value_of("PASS").map(|pass| pass.parse().unwrap());
   cfg.stats_file = if cfg.pass.is_some() {

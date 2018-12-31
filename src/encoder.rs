@@ -543,7 +543,7 @@ pub struct FrameInvariants {
   pub enable_early_exit: bool,
 }
 
-fn pos_to_lvl(pos: u64, pyramid_depth: u64) -> u64 {
+pub(crate) fn pos_to_lvl(pos: u64, pyramid_depth: u64) -> u64 {
   // Derive level within pyramid for a frame with a given coding order position
   // For example, with a pyramid of depth 2, the 2 least significant bits of the
   // position determine the level:
@@ -792,24 +792,19 @@ impl FrameInvariants {
     }
   }
 
-  pub fn set_quantizers(&mut self, qps: &QuantizerParameters) {
+  pub fn set_quantizers(
+    &mut self, qps: &QuantizerParameters, bit_depth: usize
+  ) {
     self.base_q_idx = qps.ac_qi;
     // TODO: Separate qi values for each color plane.
     if self.frame_type != FrameType::KEY {
       self.cdef_bits = 3 - ((self.base_q_idx.max(128) - 128) >> 5);
-    } else {
-      self.cdef_bits = 3;
     }
-    self.base_q_idx = qps.ac_qi;
-    // TODO: Separate qi values for each color plane.
-    debug_assert!(qps.dc_qi as i32 - qps.ac_qi as i32 >= -128);
-    debug_assert!((qps.dc_qi as i32 - qps.ac_qi as i32) < 128);
     for pi in 0..3 {
       self.dc_delta_q[pi] = (qps.dc_qi as i32 - qps.ac_qi as i32) as i8;
       self.ac_delta_q[pi] = 0;
     }
-    self.lambda =
-      qps.lambda * ((1 << 2 * (self.sequence.bit_depth - 8)) as f64);
+    self.lambda = qps.lambda * ((1 << 2 * (bit_depth - 8)) as f64);
     self.me_lambda = self.lambda.sqrt();
   }
 }
