@@ -236,12 +236,13 @@ impl QuantizerParameters {
    -> QuantizerParameters {
     let quantizer = bexp64(log_target_ac_q + q57(QSCALE + bit_depth - 8));
     let qi = select_ac_qi(quantizer, bit_depth as usize);
+    let log_target_q = (log_target_ac_q + log_target_dc_q + 1) / 2;
     QuantizerParameters {
-      log_target_q: log_target_dc_q,
+      log_target_q,
       dc_qi: qi,
       ac_qi: qi,
       lambda: (::std::f64::consts::LN_2/6.0)*
-      ((log_target_dc_q as f64)*Q57_SQUARE_EXP_SCALE).exp()
+      ((log_target_q as f64)*Q57_SQUARE_EXP_SCALE).exp()
     }
   }
 }
