@@ -1,5 +1,6 @@
 use encoder::FrameInvariants;
 use quantize::ac_q;
+use quantize::dc_q;
 use quantize::select_dc_qi;
 use quantize::select_ac_qi;
 
@@ -232,12 +233,17 @@ const Q57_SQUARE_EXP_SCALE: f64 =
  (2.0*::std::f64::consts::LN_2)/((1i64 << 57) as f64);
 
 impl QuantizerParameters {
-  fn new_from_log_q(log_target_q: i64, bit_depth: i32) -> QuantizerParameters {
-    let quantizer = bexp64(log_target_q + q57(QSCALE + bit_depth - 8));
+  fn new_from_log_q(log_target_ac_q: i64, bit_depth: i32) -> QuantizerParameters {
+    let quantizer = bexp64(log_target_ac_q + q57(QSCALE + bit_depth - 8));
+    let dc_qi = select_dc_qi(quantizer, bit_depth as usize);
+    let ac_qi = select_ac_qi(quantizer, bit_depth as usize);
+    let dc_quantizer = dc_q(dc_qi as u8, 0, bit_depth as usize) as i64;
+    let log_target_dc_q = blog64(dc_quantizer) - q57(QSCALE + bit_depth - 8);
+    let log_target_q = (log_target_ac_q + log_target_dc_q + 1) / 2;
     QuantizerParameters {
       log_target_q,
-      dc_qi: select_dc_qi(quantizer, bit_depth as usize),
-      ac_qi: select_ac_qi(quantizer, bit_depth as usize),
+      dc_qi: dc_qi,
+      ac_qi: ac_qi,
       lambda: (::std::f64::consts::LN_2/6.0)*
       ((log_target_q as f64)*Q57_SQUARE_EXP_SCALE).exp()
     }
