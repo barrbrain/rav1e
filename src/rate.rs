@@ -233,17 +233,12 @@ const Q57_SQUARE_EXP_SCALE: f64 =
  (2.0*::std::f64::consts::LN_2)/((1i64 << 57) as f64);
 
 impl QuantizerParameters {
-  fn new_from_log_q(log_target_ac_q: i64, bit_depth: i32) -> QuantizerParameters {
-    let quantizer = bexp64(log_target_ac_q + q57(QSCALE + bit_depth - 8));
-    let dc_qi = select_dc_qi(quantizer, bit_depth as usize);
-    let ac_qi = select_ac_qi(quantizer, bit_depth as usize);
-    let dc_quantizer = dc_q(dc_qi as u8, 0, bit_depth as usize) as i64;
-    let log_target_dc_q = blog64(dc_quantizer) - q57(QSCALE + bit_depth - 8);
-    let log_target_q = (log_target_ac_q + log_target_dc_q + 1) / 2;
+  fn new_from_log_q(log_target_q: i64, bit_depth: i32) -> QuantizerParameters {
+    let quantizer = bexp64(log_target_q + q57(QSCALE + bit_depth - 8));
     QuantizerParameters {
       log_target_q,
-      dc_qi: dc_qi,
-      ac_qi: ac_qi,
+      dc_qi: select_dc_qi(quantizer, bit_depth as usize),
+      ac_qi: select_ac_qi(quantizer, bit_depth as usize),
       lambda: (::std::f64::consts::LN_2/6.0)*
       ((log_target_q as f64)*Q57_SQUARE_EXP_SCALE).exp()
     }
@@ -278,8 +273,13 @@ impl RCState {
     // We use the AC quantizer as the source quantizer since its quantizer
     //  tables have unique entries, while the DC tables do not.
     let quantizer = ac_q(qi as u8, 0, bit_depth as usize) as i64;
+    // Pick the nearest DC entry since an exact match may be unavailable.
+    let dc_qi = select_dc_qi(quantizer, bit_depth as usize);
+    let dc_quantizer = dc_q(dc_qi as u8, 0, bit_depth as usize) as i64;
     // Get the log quantizer as Q57.
     let log_q = blog64(quantizer) - q57(QSCALE + bit_depth - 8);
-    QuantizerParameters::new_from_log_q(log_q, bit_depth)
+    let log_dc_q = blog64(dc_quantizer) - q57(QSCALE + bit_depth - 8);
+    // Target the midpoint of the chosen entries.
+    QuantizerParameters::new_from_log_q((log_q + log_dc_q + 1) / 2, bit_depth)
   }
 }
