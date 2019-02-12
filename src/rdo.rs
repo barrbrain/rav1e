@@ -82,7 +82,7 @@ fn cdef_dist_wxh_8x8(
   let svar = (sum_s2 - ((sum_s as i64 * sum_s as i64 + 32) >> 6)) as f64;
   let dvar = (sum_d2 - ((sum_d as i64 * sum_d as i64 + 32) >> 6)) as f64;
   let sse = (sum_d2 + sum_s2 - 2 * sum_sd) as f64;
-  let ssim_boost = 1_f64 + (svar - dvar).powi(2) / (svar + dvar + 2048_f64).powi(2);
+  let ssim_boost = 1_f64 + 2_f64 * (svar - dvar).powi(2) / (svar + dvar + 8192_f64).powi(2);
   (sse * ssim_boost + 0.5_f64) as u64
 }
 
