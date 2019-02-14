@@ -180,8 +180,10 @@ fn compute_rd_cost(
     let mut w_uv = (w_y >> xdec) & mask;
     let mut h_uv = (h_y >> ydec) & mask;
 
-    if (w_uv == 0 || h_uv == 0) && is_chroma_block {
+    if w_uv == 0 && is_chroma_block {
       w_uv = MI_SIZE;
+    }
+    if h_uv == 0 && is_chroma_block {
       h_uv = MI_SIZE;
     }
 
@@ -237,8 +239,10 @@ fn compute_tx_rd_cost(
     let mut w_uv = (w_y >> xdec) & mask;
     let mut h_uv = (h_y >> ydec) & mask;
 
-    if (w_uv == 0 || h_uv == 0) && is_chroma_block {
+    if w_uv == 0 && is_chroma_block {
       w_uv = MI_SIZE;
+    }
+    if h_uv == 0 && is_chroma_block {
       h_uv = MI_SIZE;
     }
 
