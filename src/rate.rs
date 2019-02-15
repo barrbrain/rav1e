@@ -385,6 +385,9 @@ pub struct RCState {
   // The maximum quantizer index to allow (for the luma AC coefficients, other
   //  quantizers will still be adjusted to match).
   maybe_ac_qi_max: Option<u8>,
+  // The full-precision, unmodulated log quantizer upon which the modulated
+  //  quantizer indices of the previous frame were based.
+  maybe_prev_log_base_q: Option<i64>,
   // Will we drop frames to meet bitrate requirements?
   drop_frames: bool,
   // Do we respect the maximum reservoir fullness?
@@ -536,6 +539,7 @@ impl RCState {
       target_bitrate,
       reservoir_frame_delay,
       maybe_ac_qi_max,
+      maybe_prev_log_base_q: None,
       // By defaul, enforce hard buffer constraints.
       drop_frames: true,
       cap_overflow: true,
@@ -685,7 +689,7 @@ impl RCState {
           // If this was not one of the initial frames, limit the change in
           //  base quantizer to within [0.8*Q, 1.2*Q] where Q is the previous
           //  frame's base quantizer.
-          if let Some(prev_log_base_q) = ctx.maybe_prev_log_base_q {
+          if let Some(prev_log_base_q) = self.maybe_prev_log_base_q {
             log_base_q = ::std::cmp::max(
               prev_log_base_q - 0xA4D3C25E68DC58,
               ::std::cmp::min(log_base_q, prev_log_base_q + 0xA4D3C25E68DC58)
@@ -750,12 +754,14 @@ impl RCState {
   }
 
   pub fn update_state(
-    &mut self, bits: i64, fti: usize, log_target_q: i64, droppable: bool
+    &mut self, bits: i64, fti: usize, qps: QuantizerParameters,
+    droppable: bool
   ) -> bool {
     let mut dropped = false;
     // Update rate control only if rate control is active.
     if self.target_bitrate > 0 {
-      let log_q_exp = ((log_target_q + 32) >> 6) * (self.exp[fti] as i64);
+      self.maybe_prev_log_base_q = Some(qps.log_base_q);
+      let log_q_exp = ((qps.log_target_q + 32) >> 6) * (self.exp[fti] as i64);
       let prev_log_scale = self.log_scale[fti];
       let mut bits = bits;
       if bits <= 0 {

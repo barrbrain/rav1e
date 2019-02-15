@@ -446,7 +446,6 @@ impl Config {
         maybe_ac_qi_max,
         self.enc.max_key_frame_interval as i32
       ),
-      maybe_prev_log_base_q: None,
       first_pass_data: FirstPassData {
         frames: Vec::new(),
       },
@@ -474,7 +473,6 @@ pub struct Context {
   keyframe_detector: SceneChangeDetector,
   pub config: Config,
   rc_state: RCState,
-  pub(crate) maybe_prev_log_base_q: Option<i64>,
   pub first_pass_data: FirstPassData,
 }
 
@@ -720,12 +718,11 @@ impl Context {
 
             //TODO: Trial encoding for first frame of each type.
             let data = encode_frame(fi, &mut fs);
-            self.maybe_prev_log_base_q = Some(qps.log_base_q);
             //TODO: Add support for dropping frames.
             self.rc_state.update_state(
               (data.len() * 8) as i64,
               fti,
-              qps.log_target_q,
+              qps,
               false
             );
             self.packet_data.extend(data);
