@@ -584,9 +584,7 @@ impl RCState {
   }*/
 
   // TODO: Separate quantizers for Cb and Cr.
-  pub fn select_qi(
-    &self, ctx: &Context, fti: usize, maybe_prev_log_base_q: Option<i64>
-  ) -> QuantizerParameters {
+  pub fn select_qi(&self, ctx: &Context, fti: usize) -> QuantizerParameters {
     // Is rate control active?
     if self.target_bitrate <= 0 {
       // Rate control is not active.
@@ -687,7 +685,7 @@ impl RCState {
           // If this was not one of the initial frames, limit the change in
           //  base quantizer to within [0.8*Q, 1.2*Q] where Q is the previous
           //  frame's base quantizer.
-          if let Some(prev_log_base_q) = maybe_prev_log_base_q {
+          if let Some(prev_log_base_q) = ctx.maybe_prev_log_base_q {
             log_base_q = ::std::cmp::max(
               prev_log_base_q - 0xA4D3C25E68DC58,
               ::std::cmp::min(log_base_q, prev_log_base_q + 0xA4D3C25E68DC58)

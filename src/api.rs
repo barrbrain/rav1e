@@ -474,7 +474,7 @@ pub struct Context {
   keyframe_detector: SceneChangeDetector,
   pub config: Config,
   rc_state: RCState,
-  maybe_prev_log_base_q: Option<i64>,
+  pub(crate) maybe_prev_log_base_q: Option<i64>,
   pub first_pass_data: FirstPassData,
 }
 
@@ -713,8 +713,7 @@ impl Context {
 
           if let Some(frame) = f.clone() {
             let fti = fi.get_frame_subtype();
-            let qps =
-              self.rc_state.select_qi(self, fti, self.maybe_prev_log_base_q);
+            let qps = self.rc_state.select_qi(self, fti);
             let fi = self.frame_data.get_mut(&idx).unwrap();
             fi.set_quantizers(&qps);
             let mut fs = FrameState::new_with_frame(fi, frame.clone());
