@@ -716,7 +716,7 @@ impl Context {
             let qps =
               self.rc_state.select_qi(self, fti, self.maybe_prev_log_base_q);
             let fi = self.frame_data.get_mut(&idx).unwrap();
-            fi.set_quantizers(&qps, fi.sequence.bit_depth);
+            fi.set_quantizers(&qps);
             let mut fs = FrameState::new_with_frame(fi, frame.clone());
 
             //TODO: Trial encoding for first frame of each type.
