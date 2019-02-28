@@ -123,10 +123,11 @@ impl RDOTracker {
     RDOTracker::merge_3d_array(&mut self.rate_bins, &input.rate_bins);
     RDOTracker::merge_3d_array(&mut self.rate_counts, &input.rate_counts);
   }
-  pub fn add_rate(&mut self, qindex: u8, ts: TxSize, fast_distortion: u64, rate: u64) {
+  pub fn add_rate(&mut self, lambda: f64, ts: TxSize, fast_distortion: u64, rate: u64) {
     if fast_distortion != 0 {
       let bs_index = ts as usize;
-      let q_bin_idx = (qindex as usize)/RDO_QUANT_DIV;
+      let log_q = (lambda * 18.0 + 0.5) as usize;
+      let q_bin_idx = log_q + 64 >> 7;
       let log_dist = fast_log2_q8(fast_distortion) as usize;
       let bin_idx_tmp = log_dist + 64 >> 7;
       let bin_idx = if bin_idx_tmp >= RDO_NUM_BINS {
@@ -159,10 +160,9 @@ impl RDOTracker {
   }
 }
 
-pub fn estimate_rate(qindex: u8, ts: TxSize, fast_distortion: u64) -> u64 {
-  let bs_index = ts as usize;
-  let q_bin_idx = (qindex as usize)/RDO_QUANT_DIV;
-  let log_dist = fast_log2_q8(fast_distortion) as u64;
+fn estimate_rate_inner(
+  bs_index: usize, q_bin_idx: usize, log_dist: u64
+) -> i64 {
   let bin_idx_down = (log_dist >> 7).min((RDO_NUM_BINS - 2) as u64);
   let bin_idx_up = (bin_idx_down + 1).min((RDO_NUM_BINS - 1) as u64);
   let x0 = (log_dist & !128) as i64;
@@ -170,7 +170,21 @@ pub fn estimate_rate(qindex: u8, ts: TxSize, fast_distortion: u64) -> u64 {
   let y0 = RDO_RATE_TABLE[q_bin_idx][bs_index][bin_idx_down as usize] as i64;
   let y1 = RDO_RATE_TABLE[q_bin_idx][bs_index][bin_idx_up as usize] as i64;
   let slope = ((y1 - y0) << 8) / (x1 - x0);
-  (y0 + (((log_dist as i64 - x0) * slope) >> 8)) as u64
+  y0 + (((log_dist as i64 - x0) * slope) >> 8)
+}
+
+pub fn estimate_rate(lambda: f64, ts: TxSize, fast_distortion: u64) -> u64 {
+  let bs_index = ts as usize;
+  let log_q = (lambda * 18.0 + 0.5) as usize;
+  let log_dist = fast_log2_q8(fast_distortion) as u64;
+  let bin_idx_down = (log_q >> 7).min((RDO_QUANT_BINS - 2) as usize);
+  let bin_idx_up = (bin_idx_down + 1).min((RDO_QUANT_BINS - 1) as usize);
+  let x0 = (log_q & !128) as i64;
+  let x1 = (x0 + 128) as i64;
+  let y0 = estimate_rate_inner(bs_index, bin_idx_down, log_dist);
+  let y1 = estimate_rate_inner(bs_index, bin_idx_up, log_dist);
+  let slope = ((y1 - y0) << 8) / (x1 - x0);
+  (y0 + (((log_q as i64 - x0) * slope) >> 8)) as u64
 }
 
 #[allow(unused)]
