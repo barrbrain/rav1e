@@ -31,7 +31,7 @@ use crate::predict::{RAV1E_INTRA_MODES, RAV1E_INTER_MODES_MINIMAL, RAV1E_INTER_C
 use crate::Tune;
 use crate::write_tx_blocks;
 use crate::write_tx_tree;
-use crate::util::{CastFromPrimitive, Pixel};
+use crate::util::{CastFromPrimitive, Pixel, fast_log2_q8};
 use crate::rdo_tables::*;
 
 use std;
@@ -127,7 +127,8 @@ impl RDOTracker {
     if fast_distortion != 0 {
       let bs_index = ts as usize;
       let q_bin_idx = (qindex as usize)/RDO_QUANT_DIV;
-      let bin_idx_tmp = (((fast_distortion as i64 - (RATE_EST_BIN_SIZE as i64) / 2)) as u64 / RATE_EST_BIN_SIZE) as usize;
+      let log_dist = fast_log2_q8(fast_distortion) as usize;
+      let bin_idx_tmp = log_dist + 64 >> 7;
       let bin_idx = if bin_idx_tmp >= RDO_NUM_BINS {
         RDO_NUM_BINS - 1
       } else {
@@ -161,14 +162,15 @@ impl RDOTracker {
 pub fn estimate_rate(qindex: u8, ts: TxSize, fast_distortion: u64) -> u64 {
   let bs_index = ts as usize;
   let q_bin_idx = (qindex as usize)/RDO_QUANT_DIV;
-  let bin_idx_down = ((fast_distortion) / RATE_EST_BIN_SIZE).min((RDO_NUM_BINS - 2) as u64);
+  let log_dist = fast_log2_q8(fast_distortion) as u64;
+  let bin_idx_down = (log_dist >> 7).min((RDO_NUM_BINS - 2) as u64);
   let bin_idx_up = (bin_idx_down + 1).min((RDO_NUM_BINS - 1) as u64);
-  let x0 = (bin_idx_down * RATE_EST_BIN_SIZE) as i64;
-  let x1 = (bin_idx_up * RATE_EST_BIN_SIZE) as i64;
+  let x0 = (log_dist & !128) as i64;
+  let x1 = (x0 + 128) as i64;
   let y0 = RDO_RATE_TABLE[q_bin_idx][bs_index][bin_idx_down as usize] as i64;
   let y1 = RDO_RATE_TABLE[q_bin_idx][bs_index][bin_idx_up as usize] as i64;
   let slope = ((y1 - y0) << 8) / (x1 - x0);
-  (y0 + (((fast_distortion as i64 - x0) * slope) >> 8)) as u64
+  (y0 + (((log_dist as i64 - x0) * slope) >> 8)) as u64
 }
 
 #[allow(unused)]
