@@ -1020,12 +1020,12 @@ pub fn encode_tx_block<T: Pixel>(
     tx_dist = (tx_dist + tx_dist_scale_rounding_offset) >> tx_dist_scale_bits;
   }
   if fi.config.train_rdo {
-    fs.t.add_rate(fi.base_q_idx, tx_size, tx_dist as u64, cost_coeffs as u64);
+    fs.t.add_rate(fi.me_lambda, tx_size, tx_dist as u64, cost_coeffs as u64);
   }
 
   if rdo_type == RDOType::TxDistEstRate {
     // look up rate and distortion in table
-    let estimated_rate = estimate_rate(fi.base_q_idx, tx_size, tx_dist as u64);
+    let estimated_rate = estimate_rate(fi.me_lambda, tx_size, tx_dist as u64);
     w.add_bits_frac(estimated_rate as u32);
   }
   (has_coeff, tx_dist)
