@@ -184,7 +184,7 @@ pub fn estimate_rate(lambda: f64, ts: TxSize, fast_distortion: u64) -> u64 {
   let y0 = estimate_rate_inner(bs_index, bin_idx_down, log_dist);
   let y1 = estimate_rate_inner(bs_index, bin_idx_up, log_dist);
   let slope = ((y1 - y0) << 8) / (x1 - x0);
-  (y0 + (((log_q as i64 - x0) * slope) >> 8)) as u64
+  (y0 + (((log_q as i64 - x0) * slope) >> 8)).max(0) as u64
 }
 
 #[allow(unused)]
@@ -1447,10 +1447,4 @@ pub fn rdo_loop_decision<T: Pixel>(sbo: &SuperBlockOffset, fi: &FrameInvariants<
       }
     }
   }
-}
-
-#[test]
-fn estimate_rate_test() {
-  assert_eq!(estimate_rate(0, TxSize::TX_4X4, 0), RDO_RATE_TABLE[0][0][0]);
-  assert_eq!(estimate_rate(0, TxSize::TX_4X4, 99999999), RDO_RATE_TABLE[0][0][RDO_NUM_BINS - 1]);
 }
