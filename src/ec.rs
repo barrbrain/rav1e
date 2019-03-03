@@ -106,7 +106,7 @@ pub struct WriterBase<S> {
   /// Debug enable flag
   debug: bool,
   /// Fake extra bits added by RDO
-  fake_bits_frac: u32,
+  fake_bits_frac: u64,
   /// Use-specific storage
   s: S
 }
@@ -142,7 +142,9 @@ pub struct WriterCheckpoint {
   /// Saved number of values in the current range.
   rng: u16,
   /// Saved number of bits of data in the current value.
-  cnt: i16
+  cnt: i16,
+  /// Saved fake extra fractional bits
+  fake_bits_frac: u64
 }
 
 /// Constructor for a counting Writer
@@ -195,13 +197,15 @@ impl StorageBackend for WriterBase<WriterCounter> {
       stream_bytes: self.s.bytes,
       backend_var: 0,
       rng: self.rng,
-      cnt: self.cnt
+      cnt: self.cnt,
+      fake_bits_frac: self.fake_bits_frac
     }
   }
   fn rollback(&mut self, checkpoint: &WriterCheckpoint) {
     self.rng = checkpoint.rng;
     self.cnt = checkpoint.cnt;
     self.s.bytes = checkpoint.stream_bytes;
+    self.fake_bits_frac = checkpoint.fake_bits_frac;
   }
 }
 
@@ -237,7 +241,8 @@ impl StorageBackend for WriterBase<WriterRecorder> {
       stream_bytes: self.s.bytes,
       backend_var: self.s.storage.len(),
       rng: self.rng,
-      cnt: self.cnt
+      cnt: self.cnt,
+      fake_bits_frac: self.fake_bits_frac
     }
   }
   fn rollback(&mut self, checkpoint: &WriterCheckpoint) {
@@ -245,6 +250,7 @@ impl StorageBackend for WriterBase<WriterRecorder> {
     self.cnt = checkpoint.cnt;
     self.s.bytes = checkpoint.stream_bytes;
     self.s.storage.truncate(checkpoint.backend_var);
+    self.fake_bits_frac = checkpoint.fake_bits_frac;
   }
 }
 
@@ -285,7 +291,8 @@ impl StorageBackend for WriterBase<WriterEncoder> {
       stream_bytes: self.s.precarry.len(),
       backend_var: self.s.low as usize,
       rng: self.rng,
-      cnt: self.cnt
+      cnt: self.cnt,
+      fake_bits_frac: self.fake_bits_frac
     }
   }
   fn rollback(&mut self, checkpoint: &WriterCheckpoint) {
@@ -293,6 +300,7 @@ impl StorageBackend for WriterBase<WriterEncoder> {
     self.cnt = checkpoint.cnt;
     self.s.low = checkpoint.backend_var as ec_window;
     self.s.precarry.truncate(checkpoint.stream_bytes);
+    self.fake_bits_frac = checkpoint.fake_bits_frac;
   }
 }
 
@@ -484,7 +492,7 @@ where
   }
   // fake add bits
   fn add_bits_frac(&mut self, bits_frac: u32) {
-    self.fake_bits_frac += bits_frac
+    self.fake_bits_frac += bits_frac as u64
   }
   /// Encode a literal bitstring, bit by bit in MSB order, with flat
   /// probability.
@@ -729,7 +737,7 @@ where
   fn tell(&mut self) -> u32 {
     // The 10 here counteracts the offset of -9 baked into cnt, and adds 1 extra
     // bit, which we reserve for terminating the stream.
-    (((self.stream_bytes() * 8) as i32) + (self.cnt as i32) + 10) as u32 + (self.fake_bits_frac >> 8)
+    (((self.stream_bytes() * 8) as i32) + (self.cnt as i32) + 10) as u32 + (self.fake_bits_frac >> 8) as u32
   }
   /// Returns the number of bits "used" by the encoded symbols so far.
   /// This same number can be computed in either the encoder or the
@@ -739,7 +747,7 @@ where
   ///         This will always be slightly larger than the exact value (e.g., all
   ///          rounding error is in the positive direction).
   fn tell_frac(&mut self) -> u32 {
-    Self::frac_compute(self.tell(), self.rng as u32) + self.fake_bits_frac
+    Self::frac_compute(self.tell(), self.rng as u32) + self.fake_bits_frac as u32
   }
   /// Save current point in coding/recording to a checkpoint that can
   /// be restored later.  A WriterCheckpoint can be generated for an
