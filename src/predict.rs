@@ -220,7 +220,7 @@ where
   fn pred_dc(output: &mut PlaneMutSlice<'_, T>, above: &[T], left: &[T]) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_dc_avx2(
             output.as_mut_ptr() as *mut _,
@@ -248,7 +248,7 @@ where
   fn pred_dc_128(output: &mut PlaneMutSlice<'_, T>, bit_depth: usize) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_dc_128_avx2(
             output.as_mut_ptr() as *mut _,
@@ -272,7 +272,7 @@ where
   fn pred_dc_left(output: &mut PlaneMutSlice<'_, T>, _above: &[T], left: &[T]) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_dc_left_avx2(
             output.as_mut_ptr() as *mut _,
@@ -295,7 +295,7 @@ where
   fn pred_dc_top(output: &mut PlaneMutSlice<'_, T>, above: &[T], _left: &[T]) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_dc_top_avx2(
             output.as_mut_ptr() as *mut _,
@@ -318,7 +318,7 @@ where
   fn pred_h(output: &mut PlaneMutSlice<'_, T>, left: &[T]) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_h_avx2(
             output.as_mut_ptr() as *mut _,
@@ -343,7 +343,7 @@ where
   fn pred_v(output: &mut PlaneMutSlice<'_, T>, above: &[T]) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_v_avx2(
             output.as_mut_ptr() as *mut _,
@@ -367,7 +367,7 @@ where
   ) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_paeth_avx2(
             output.as_mut_ptr() as *mut _,
@@ -660,7 +660,7 @@ where
   ) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_cfl_avx2(
             output.as_mut_ptr() as *mut _,
@@ -683,7 +683,7 @@ where
   ) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_cfl_128_avx2(
             output.as_mut_ptr() as *mut _,
@@ -707,7 +707,7 @@ where
   ) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_cfl_left_avx2(
             output.as_mut_ptr() as *mut _,
@@ -731,7 +731,7 @@ where
   ) {
     #[cfg(all(target_arch = "x86_64", not(windows), feature = "nasm"))]
     {
-      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 32) {
+      if size_of::<T>() == 1 && is_x86_feature_detected!("avx2") && is_aligned(output.as_ptr(), 16) {
         return unsafe {
           rav1e_ipred_cfl_top_avx2(
             output.as_mut_ptr() as *mut _,
