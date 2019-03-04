@@ -313,7 +313,7 @@ impl Sequence {
       enable_ref_frame_mvs: false,
       enable_warped_motion: false,
       enable_superres: false,
-      enable_cdef: true,
+      enable_cdef: false,
       enable_restoration: config.chroma_sampling != ChromaSampling::Cs422 &&
         config.chroma_sampling != ChromaSampling::Cs444, // FIXME: not working yet
       operating_points_cnt_minus_1: 0,
@@ -1268,11 +1268,11 @@ pub fn luma_ac<T: Pixel>(
     for sub_x in 0..plane_bsize.width() {
       let y = sub_y << ydec;
       let x = sub_x << xdec;
-      let sample: i16 = ((luma.p(x, y)
-                          + luma.p(x + 1, y)
-                          + luma.p(x, y + 1)
-                          + luma.p(x + 1, y + 1))
-                         << 1).as_();
+      let sample: i16 = (i16::cast_from(luma.p(x, y))
+                          + i16::cast_from(luma.p(x + 1, y))
+                          + i16::cast_from(luma.p(x, y + 1))
+                          + i16::cast_from(luma.p(x + 1, y + 1)))
+                         << 1;
       ac[sub_y * plane_bsize.width() + sub_x] = sample;
       sum += sample as i32;
     }

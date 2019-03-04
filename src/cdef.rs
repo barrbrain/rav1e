@@ -18,6 +18,7 @@ use crate::util::{clamp, msb, Pixel, CastFromPrimitive};
 use std::cmp;
 use std::mem;
 
+#[derive(Default)]
 pub struct CdefDirections {
   dir: [[u8; 8]; 8],
   var: [[i32; 8]; 8]
@@ -268,7 +269,6 @@ pub fn cdef_sb_padded_frame_copy<T: Pixel>(
   fi: &FrameInvariants<T>, sbo: &SuperBlockOffset,
   f: &Frame<T>, pad: usize
 ) -> Frame<T> {
-  assert!(mem::size_of::<T>() == 2, "only implemented for u16 for now");
   let ipad = pad as isize;
   let sb_size = if fi.sequence.use_128x128_superblock {128} else {64};
   let mut out = Frame {

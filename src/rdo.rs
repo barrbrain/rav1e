@@ -1203,8 +1203,12 @@ pub fn rdo_loop_decision<T: Pixel>(sbo: &SuperBlockOffset, fi: &FrameInvariants<
   // Try all CDEF options with current LRF; if new CDEF+LRF choice is better, select it.
   // Try all LRF options with current CDEF; if new CDEF+LRF choice is better, select it.
   // If LRF choice changed for any plane, repeat last two steps.
-  let cdef_dirs = cdef_analyze_superblock(&mut cdef_input, &mut cw.bc,
-                                          &sbo_0, &sbo, fi.sequence.bit_depth);
+  let cdef_dirs = if fi.sequence.enable_cdef {
+      cdef_analyze_superblock(&mut cdef_input, &mut cw.bc,
+                                          &sbo_0, &sbo, fi.sequence.bit_depth)
+  } else {
+      CdefDirections::default()
+  };
   let mut first_loop = true;
   loop {
     // check for [new] cdef index if cdef is enabled.
