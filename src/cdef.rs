@@ -18,7 +18,6 @@ use crate::util::{clamp, msb, Pixel, CastFromPrimitive};
 use std::cmp;
 use std::mem;
 
-#[derive(Default)]
 pub struct CdefDirections {
   dir: [[u8; 8]; 8],
   var: [[i32; 8]; 8]
