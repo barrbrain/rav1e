@@ -639,9 +639,11 @@ pub mod test {
     let mut input_plane = Plane::new(640, 480, 0, 0, 128 + 8, 128 + 8);
     let mut rec_plane = input_plane.clone();
 
+    let pad_off = (input_plane.cfg.xorigin - input_plane.cfg.xpad) as i32;
+
     for (i, row) in input_plane.data.chunks_mut(input_plane.cfg.stride).enumerate() {
       for (j, pixel) in row.into_iter().enumerate() {
-        let val = ((j + i) as i32 & 255i32) as u16;
+        let val = ((j + i) as i32 - pad_off & 255i32) as u16;
         assert!(val >= u8::min_value().into() &&
             val <= u8::max_value().into());
         *pixel = val;
@@ -650,7 +652,7 @@ pub mod test {
 
     for (i, row) in rec_plane.data.chunks_mut(rec_plane.cfg.stride).enumerate() {
       for (j, pixel) in row.into_iter().enumerate() {
-        let val = (j as i32 - i as i32 & 255i32) as u16;
+        let val = (j as i32 - i as i32 - pad_off & 255i32) as u16;
         assert!(val >= u8::min_value().into() &&
             val <= u8::max_value().into());
         *pixel = val;
@@ -661,7 +663,6 @@ pub mod test {
   }
 
   // Regression and validation test for SAD computation
-  #[ignore]
   #[test]
   fn get_sad_same() {
     let blocks: Vec<(BlockSize, u32)> = vec![
