@@ -210,16 +210,16 @@ mod test {
   use crate::plane::*;
 
   fn test_roundtrip(tx_size: TxSize, tx_type: TxType, tolerance: i16) {
-    let mut src_storage = [0u8; 64 * 64];
+    let mut src_storage = [0u16; 64 * 64];
     let src = &mut src_storage[..tx_size.area()];
-    let mut dst = Plane::wrap(vec![0u8; tx_size.area()], tx_size.width());
+    let mut dst = Plane::wrap(vec![0u16; tx_size.area()], tx_size.width());
     let mut res_storage = [0i16; 64 * 64];
     let res = &mut res_storage[..tx_size.area()];
     let mut freq_storage = [0i32; 64 * 64];
     let freq = &mut freq_storage[..tx_size.area()];
     for ((r, s), d) in res.iter_mut().zip(src.iter_mut()).zip(dst.data.iter_mut()) {
-      *s = random::<u8>();
-      *d = random::<u8>();
+      *s = random::<u8>() as u16;
+      *d = random::<u8>() as u16;
       *r = (*s as i16) - (*d as i16);
     }
     forward_transform(res, freq, tx_size.width(), tx_size, tx_type, 8);
