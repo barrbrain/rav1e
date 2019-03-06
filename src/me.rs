@@ -785,7 +785,7 @@ pub mod test {
     let mut input_plane = Plane::new(640, 480, 0, 0, 128 + 8, 128 + 8);
     let mut rec_plane = input_plane.clone();
     // Make the test pattern robust to data alignment
-    let xpad_off = (input_plane.cfg.xorigin - input_plane.cfg.xpad) as i32;
+    let xpad_off = (input_plane.cfg.xorigin - input_plane.cfg.xpad) as i32 - 8i32;
 
     for (i, row) in input_plane.data.chunks_mut(input_plane.cfg.stride).enumerate() {
       for (j, pixel) in row.into_iter().enumerate() {
@@ -841,7 +841,7 @@ pub mod test {
     for block in blocks {
       let bsw = block.0.width();
       let bsh = block.0.height();
-      let po = PlaneOffset { x: 40, y: 40 };
+      let po = PlaneOffset { x: 32, y: 40 };
 
       let mut input_slice = input_plane.slice(&po);
       let mut rec_slice = rec_plane.slice(&po);
