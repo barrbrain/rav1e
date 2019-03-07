@@ -133,11 +133,16 @@ mod nasm {
     blk_w: usize
   ) -> u32 {
     assert!(mem::size_of::<T>() == 1, "only implemented for u8 for now");
+    // FIXME unaligned blocks coming from hres/qres ME search
+    let ptr_align_log2 = (plane_org.as_ptr() as usize).trailing_zeros() as usize;
+    if ptr_align_log2 < 2 {
+      return super::native::get_sad(plane_org, plane_ref, blk_h, blk_w, 8);
+    }
     let mut sum = 0 as u32;
     let org_stride = (plane_org.plane.cfg.stride * mem::size_of::<T>()) as libc::ptrdiff_t;
     let ref_stride = (plane_ref.plane.cfg.stride * mem::size_of::<T>()) as libc::ptrdiff_t;
     assert!(blk_h >= 4 && blk_w >= 4);
-    let step_size = blk_h.min(blk_w);
+    let step_size = blk_h.min(blk_w).min(1 << ptr_align_log2);
     let func = match step_size.ilog() {
       3 => rav1e_sad4x4_sse2,
       4 => rav1e_sad8x8_sse2,
