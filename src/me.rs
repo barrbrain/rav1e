@@ -680,8 +680,8 @@ pub fn estimate_motion_ss4<T: Pixel>(
     let blk_h = bsize.height();
     let bo_adj = adjust_bo(bo, fi, blk_w, blk_h);
     let po = PlaneOffset {
-      x: (bo_adj.x as isize) << BLOCK_TO_PLANE_SHIFT >> 2,
-      y: (bo_adj.y as isize) << BLOCK_TO_PLANE_SHIFT >> 2
+      x: (bo_adj.x as isize) >> 2 << BLOCK_TO_PLANE_SHIFT,
+      y: (bo_adj.y as isize) >> 2 << BLOCK_TO_PLANE_SHIFT
     };
 
     let range_x = 192 * fi.me_range_scale as isize;
@@ -732,8 +732,8 @@ pub fn estimate_motion_ss2<T: Pixel>(
     let blk_h = bsize.height();
     let bo_adj = adjust_bo(bo, fi, blk_w, blk_h);
     let po = PlaneOffset {
-      x: (bo_adj.x as isize) << BLOCK_TO_PLANE_SHIFT >> 1,
-      y: (bo_adj.y as isize) << BLOCK_TO_PLANE_SHIFT >> 1
+      x: (bo_adj.x as isize) >> 1 << BLOCK_TO_PLANE_SHIFT,
+      y: (bo_adj.y as isize) >> 1 << BLOCK_TO_PLANE_SHIFT
     };
     let range = 16;
     let (mvx_min, mvx_max, mvy_min, mvy_max) = get_mv_range(fi.w_in_b, fi.h_in_b, &bo_adj, blk_w, blk_h);
