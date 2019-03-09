@@ -1267,22 +1267,28 @@ pub fn rdo_loop_decision<T: Pixel>(sbo: &SuperBlockOffset, fi: &FrameInvariants<
   let mut best_cost_acc = -1.;
   let mut best_cost = [-1.; PLANES];
   let sbo_0 = SuperBlockOffset { x: 0, y: 0 };
-  let mut lrf_input;
-  let mut lrf_output;
-  let mut cdef_input;
 
-  assert!(fi.sequence.enable_cdef);
   // all stages; reconstruction goes to cdef so it must be additionally padded
   // TODO: use the new plane padding mechanism rather than this old kludge.  Will require
   // altering CDEF code a little.
-  cdef_input = cdef_sb_padded_frame_copy(fi, sbo, &fs.rec, 2);
-  lrf_input = cdef_sb_frame(fi, &fs.rec);
-  lrf_output = cdef_sb_frame(fi, &fs.rec);
-  // FIXME: T:T padded frame copy required for CDEF disabled path.
-  // no cdef; unpadded reconstruction offered directly to LRF optimization
-  // cdef_input = cdef_empty_frame(&fs.rec);
-  // lrf_input = cdef_sb_padded_frame_copy(fi, sbo, &fs.rec, 0);
-  // lrf_output = cdef_sb_frame(fi, &fs.rec);
+  let cdef_input = if fi.sequence.enable_cdef {
+    Some(cdef_sb_padded_frame_copy(fi, sbo, &fs.rec, 2))
+  } else {
+    None
+  };
+  let mut lrf_input = cdef_sb_frame(fi, &fs.rec);
+  if cdef_input.is_none() {
+   for p in 0..3 {
+     let po = sbo.plane_offset(&fs.rec.planes[p].cfg);
+     let PlaneConfig { width, height, .. } = lrf_input.planes[p].cfg;
+     for (rec, inp) in fs.rec.planes[p].slice(&po).rows_iter().zip(
+       lrf_input.planes[p].as_mut_slice().rows_iter_mut()
+     ).take(height) {
+       inp[..width].copy_from_slice(&rec[..width]);
+     }
+   }
+  }
+  let mut lrf_output = cdef_sb_frame(fi, &fs.rec);
 
   let mut lrf_any_uncoded = false;
   if fi.sequence.enable_restoration {
@@ -1300,19 +1306,21 @@ pub fn rdo_loop_decision<T: Pixel>(sbo: &SuperBlockOffset, fi: &FrameInvariants<
   // Try all CDEF options with current LRF; if new CDEF+LRF choice is better, select it.
   // Try all LRF options with current CDEF; if new CDEF+LRF choice is better, select it.
   // If LRF choice changed for any plane, repeat last two steps.
-  let cdef_dirs = cdef_analyze_superblock(&mut cdef_input, &mut cw.bc,
-                                          &sbo_0, &sbo, fi.sequence.bit_depth);
+  let bd = fi.sequence.bit_depth;
+  let cdef_data = cdef_input.as_ref().map(|input| {
+    (input, cdef_analyze_superblock(input, &mut cw.bc, &sbo_0, &sbo, bd))
+  });
   let mut first_loop = true;
   loop {
     // check for [new] cdef index if cdef is enabled.
     let mut cdef_change = false;
     let prev_best_index = best_index;
-    if fi.sequence.enable_cdef {
+    if let Some((cdef_input, cdef_dirs)) = cdef_data.as_ref() {
       for cdef_index in 0..(1<<fi.cdef_bits) {
         if cdef_index != prev_best_index {
           let mut cost = [0.; PLANES];
           let mut cost_acc = 0.;
-          cdef_filter_superblock(fi, &mut cdef_input, &mut lrf_input,
+          cdef_filter_superblock(fi, &cdef_input, &mut lrf_input,
                                  &mut cw.bc, &sbo_0, &sbo, cdef_index as u8, &cdef_dirs);
           for pli in 0..3 {
             match best_lrf[pli] {
@@ -1362,8 +1370,8 @@ pub fn rdo_loop_decision<T: Pixel>(sbo: &SuperBlockOffset, fi: &FrameInvariants<
     let mut lrf_change = false;
     if fi.sequence.enable_restoration && lrf_any_uncoded {
       // need cdef output from best index, not just last iteration
-      if fi.sequence.enable_cdef {
-        cdef_filter_superblock(fi, &mut cdef_input, &mut lrf_input,
+      if let Some((cdef_input, cdef_dirs)) = cdef_data.as_ref() {
+        cdef_filter_superblock(fi, &cdef_input, &mut lrf_input,
                                &mut cw.bc, &sbo_0, &sbo, best_index as u8, &cdef_dirs);
       }
 
