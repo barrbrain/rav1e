@@ -438,8 +438,8 @@ impl QuantizerParameters {
     log_base_q: i64, log_target_q: i64, bit_depth: usize
   ) -> QuantizerParameters {
     let quantizer = bexp64(log_target_q + q57(QSCALE + bit_depth as i32 - 8));
-    let quantizer_u = quantizer;
-    let quantizer_v = quantizer;
+    let quantizer_u = quantizer * 448 >> 8;
+    let quantizer_v = quantizer * 320 >> 8;
     QuantizerParameters {
       log_base_q,
       log_target_q,
