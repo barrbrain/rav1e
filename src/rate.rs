@@ -433,13 +433,24 @@ pub struct QuantizerParameters {
 const Q57_SQUARE_EXP_SCALE: f64 =
   (2.0 * ::std::f64::consts::LN_2) / ((1i64 << 57) as f64);
 
+fn chroma_offset(log_target_q: i64) -> (i64, i64) {
+    let x0 = 0xFF8DD07D4A6664E8u64 as i64;
+    let x1 = 0x0A9E531F202EC4E8u64 as i64;
+    let m_q12 = -1241i64;
+    let x = log_target_q.max(x0).min(x1) - x0;
+    let dy = m_q12 * (x >> 12);
+    (0x19D5D9FD5010B37i64 + dy, 0xA4D3C25E68DC58 + dy)
+}
+
 impl QuantizerParameters {
   fn new_from_log_q(
     log_base_q: i64, log_target_q: i64, bit_depth: usize
   ) -> QuantizerParameters {
-    let quantizer = bexp64(log_target_q + q57(QSCALE + bit_depth as i32 - 8));
-    let quantizer_u = quantizer * 140 >> 8;
-    let quantizer_v = quantizer * 100 >> 8;
+    let scale = q57(QSCALE + bit_depth as i32 - 8);
+    let quantizer = bexp64(log_target_q + scale);
+    let (offset_u, offset_v) = chroma_offset(log_target_q);
+    let quantizer_u = bexp64(log_target_q + offset_u + scale);
+    let quantizer_v = bexp64(log_target_q + offset_v + scale);
     QuantizerParameters {
       log_base_q,
       log_target_q,
