@@ -433,13 +433,14 @@ pub struct QuantizerParameters {
 const Q57_SQUARE_EXP_SCALE: f64 =
   (2.0 * ::std::f64::consts::LN_2) / ((1i64 << 57) as f64);
 
+// Daala style log-offset for chroma quantizers
 fn chroma_offset(log_target_q: i64) -> (i64, i64) {
-    let x0 = 0xFF8DD07D4A6664E8u64 as i64;
-    let x1 = 0x0A9E531F202EC4E8u64 as i64;
-    let m_q12 = -1241i64;
-    let x = log_target_q.max(x0).min(x1) - x0;
-    let dy = m_q12 * (x >> 12);
-    (0x19D5D9FD5010B37i64 + dy, 0xA4D3C25E68DC58 + dy)
+    let blog64_40 = 0xAA4D3C25E68DC58i64;
+    let x = log_target_q.max(0).min(blog64_40);
+    // m = (blog64(16) - blog64(5)) / blog64(40)
+    let y = 1291i64 * (x >> 12);
+    // blog64(7) - blog64(4); blog64(5) - blog64(4)
+    (0x19D5D9FD5010B37 - y, 0xA4D3C25E68DC58 - y)
 }
 
 impl QuantizerParameters {
