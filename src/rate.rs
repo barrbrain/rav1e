@@ -559,21 +559,21 @@ const Q57_SQUARE_EXP_SCALE: f64 =
   (2.0 * ::std::f64::consts::LN_2) / ((1i64 << 57) as f64);
 
 // Daala style log-offset for chroma quantizers
-fn chroma_offset(log_target_q: i64) -> (i64, i64) {
+fn chroma_offset(log_target_q: i64, m_q8: u8) -> (i64, i64) {
   let x = log_target_q.max(0);
-  // Gradient 0.266 optimized for CIEDE2000+PSNR on subset3
-  let y = (x >> 2) + (x >> 6);
+  let m_q12 = (m_q8 as i64) << 4;
+  let y = m_q12 * (x >> 12);
   // blog64(7) - blog64(4); blog64(5) - blog64(4)
   (0x19D_5D9F_D501_0B37 - y, 0xA4_D3C2_5E68_DC58 - y)
 }
 
 impl QuantizerParameters {
   fn new_from_log_q(
-    log_base_q: i64, log_target_q: i64, bit_depth: usize,
+    log_base_q: i64, log_target_q: i64, bit_depth: usize, uv_m_q8: u8,
   ) -> QuantizerParameters {
     let scale = q57(QSCALE + bit_depth as i32 - 8);
     let quantizer = bexp64(log_target_q + scale);
-    let (offset_u, offset_v) = chroma_offset(log_target_q);
+    let (offset_u, offset_v) = chroma_offset(log_target_q, uv_m_q8);
     let log_target_q_u = log_target_q + offset_u;
     let log_target_q_v = log_target_q + offset_v;
     let quantizer_u = bexp64(log_target_q_u + scale);
@@ -747,6 +747,7 @@ impl RCState {
     &self, ctx: &ContextInner<T>, output_frameno: u64, fti: usize,
     maybe_prev_log_base_q: Option<i64>,
   ) -> QuantizerParameters {
+    let uv_m_q8 = ctx.config.uv_m_q8;
     // Is rate control active?
     if self.target_bitrate <= 0 {
       // Rate control is not active.
@@ -770,7 +771,7 @@ impl RCState {
       // Adjust the quantizer for the frame type, result is Q57:
       let log_q = ((log_base_q + (1i64 << 11)) >> 12) * (MQP_Q12[fti] as i64)
         + DQP_Q57[fti];
-      QuantizerParameters::new_from_log_q(log_base_q, log_q, bit_depth)
+      QuantizerParameters::new_from_log_q(log_base_q, log_q, bit_depth, uv_m_q8)
     } else {
       let mut nframes: [i32; FRAME_NSUBTYPES + 1] = [0; FRAME_NSUBTYPES + 1];
       let mut log_scale: [i64; FRAME_NSUBTYPES] = self.log_scale;
@@ -788,6 +789,7 @@ impl RCState {
             self.pass1_log_base_q,
             log_q,
             ctx.config.bit_depth,
+            uv_m_q8,
           );
         }
         // Second pass of 2-pass mode: we know exactly how much of each frame
@@ -1052,7 +1054,7 @@ impl RCState {
           // If that target is unreasonable, oh well; we'll have to drop.
         }
       }
-      QuantizerParameters::new_from_log_q(log_base_q, log_q, bit_depth)
+      QuantizerParameters::new_from_log_q(log_base_q, log_q, bit_depth, uv_m_q8)
     }
   }
 
