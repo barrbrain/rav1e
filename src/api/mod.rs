@@ -111,6 +111,7 @@ pub struct EncoderConfig {
   pub speed_settings: SpeedSettings,
   pub show_psnr: bool,
   pub train_rdo: bool,
+  pub uv_m_q8: u8,
 }
 
 /// Default preset for EncoderConfig: it is a balance between quality and speed.
@@ -163,6 +164,7 @@ impl EncoderConfig {
       speed_settings: SpeedSettings::from_preset(speed),
       show_psnr: false,
       train_rdo: false,
+      uv_m_q8: 81,
     }
   }
 
