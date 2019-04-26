@@ -107,6 +107,8 @@ pub struct EncoderConfig {
   pub show_psnr: bool,
   /// Enables dumping of internal RDO training data.
   pub train_rdo: bool,
+  /// Gradient of quantizer offset for chroma planes.
+  pub uv_m_q8: u8,
 }
 
 /// Default preset for EncoderConfig: it is a balance between quality and
@@ -159,6 +161,7 @@ impl EncoderConfig {
       speed_settings: SpeedSettings::from_preset(speed),
       show_psnr: false,
       train_rdo: false,
+      uv_m_q8: 68,
     }
   }
 
@@ -223,6 +226,7 @@ impl fmt::Display for EncoderConfig {
         "non_square_partition",
         self.speed_settings.non_square_partition.to_string(),
       ),
+      ("uv_m_q8", self.uv_m_q8.to_string()),
     ];
     write!(
       f,
