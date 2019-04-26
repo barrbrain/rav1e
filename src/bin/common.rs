@@ -262,6 +262,12 @@ pub fn parse_cli() -> CliOptions {
       Arg::with_name("train-rdo")
         .long("train-rdo")
     )
+    .arg(
+      Arg::with_name("UV_M_Q8")
+        .long("uv-m-q8")
+        .takes_value(true)
+        .default_value("81")
+    )
     .subcommand(SubCommand::with_name("advanced")
                 .setting(AppSettings::Hidden)
                 .about("Advanced features")
@@ -448,6 +454,7 @@ fn parse_config(matches: &ArgMatches<'_>) -> EncoderConfig {
 
   cfg.low_latency = matches.is_present("LOW_LATENCY");
   cfg.train_rdo = train_rdo;
+  cfg.uv_m_q8 = matches.value_of("UV_M_Q8").unwrap().parse().unwrap();
   cfg
 }
 

@@ -434,22 +434,21 @@ const Q57_SQUARE_EXP_SCALE: f64 =
   (2.0 * ::std::f64::consts::LN_2) / ((1i64 << 57) as f64);
 
 // Daala style log-offset for chroma quantizers
-fn chroma_offset(log_target_q: i64) -> (i64, i64) {
-    let blog64_40 = 0xAA4_D3C2_5E68_DC58i64;
-    let x = log_target_q.max(0).min(blog64_40);
-    // m = (blog64(16) - blog64(5)) / blog64(40)
-    let y = 1291i64 * (x >> 12);
+fn chroma_offset(log_target_q: i64, m_q8: u8) -> (i64, i64) {
+    let x = log_target_q.max(0);
+    let m_q12 = (m_q8 as i64) << 4;
+    let y = m_q12 * (x >> 12);
     // blog64(7) - blog64(4); blog64(5) - blog64(4)
     (0x19D_5D9F_D501_0B37 - y, 0xA4_D3C2_5E68_DC58 - y)
 }
 
 impl QuantizerParameters {
   fn new_from_log_q(
-    log_base_q: i64, log_target_q: i64, bit_depth: usize
+    log_base_q: i64, log_target_q: i64, bit_depth: usize, uv_m_q8: u8
   ) -> QuantizerParameters {
     let scale = q57(QSCALE + bit_depth as i32 - 8);
     let quantizer = bexp64(log_target_q + scale);
-    let (offset_u, offset_v) = chroma_offset(log_target_q);
+    let (offset_u, offset_v) = chroma_offset(log_target_q, uv_m_q8);
     let quantizer_u = bexp64(log_target_q + offset_u + scale);
     let quantizer_v = bexp64(log_target_q + offset_v + scale);
     QuantizerParameters {
@@ -564,6 +563,7 @@ impl RCState {
   pub fn select_qi<T: Pixel>(
     &self, ctx: &ContextInner<T>, fti: usize, maybe_prev_log_base_q: Option<i64>
   ) -> QuantizerParameters {
+    let uv_m_q8 = ctx.config.uv_m_q8;
     // Is rate control active?
     if self.target_bitrate <= 0 {
       // Rate control is not active.
@@ -587,7 +587,7 @@ impl RCState {
       // Adjust the quantizer for the frame type, result is Q57:
       let log_q = ((log_base_q + (1i64 << 11)) >> 12) * (MQP_Q12[fti] as i64)
         + DQP_Q57[fti];
-      QuantizerParameters::new_from_log_q(log_base_q, log_q, bit_depth)
+      QuantizerParameters::new_from_log_q(log_base_q, log_q, bit_depth, uv_m_q8)
     } else {
       match self.twopass_state {
         // Single pass only right now.
@@ -715,7 +715,7 @@ impl RCState {
               // If that target is unreasonable, oh well; we'll have to drop.
             }
           }
-          QuantizerParameters::new_from_log_q(log_base_q, log_q, bit_depth)
+          QuantizerParameters::new_from_log_q(log_base_q, log_q, bit_depth, uv_m_q8)
         }
       }
     }
