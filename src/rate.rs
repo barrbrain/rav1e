@@ -435,7 +435,7 @@ const Q57_SQUARE_EXP_SCALE: f64 =
 
 // Daala style log-offset for chroma quantizers
 fn chroma_offset(log_target_q: i64) -> (i64, i64) {
-    let x = log_target_q.max(0);
+    let x = log_target_q.max(0).min(0x98C_94B4_F5E0_D556);
     // Gradient optimized for CIEDE2000 on subset1
     // (0, 2082) -> (191, 1439)
     let m = 2082 - 643.min((x >> 45) * 144_647 >> 22);
