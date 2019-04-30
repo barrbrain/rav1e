@@ -434,12 +434,9 @@ const Q57_SQUARE_EXP_SCALE: f64 =
   (2.0 * ::std::f64::consts::LN_2) / ((1i64 << 57) as f64);
 
 // Daala style log-offset for chroma quantizers
-fn chroma_offset(log_target_q: i64) -> (i64, i64) {
-    let x = log_target_q.max(0);
-    // Gradient optimized for Y-PSNR + CIEDE2000 on subset1
-    let y = 15 * (x >> 6);
+fn chroma_offset() -> (i64, i64) {
     // blog64(7) - blog64(4); blog64(5) - blog64(4)
-    (0x19D_5D9F_D501_0B37 - y, 0xA4_D3C2_5E68_DC58 - y)
+    (0x19D_5D9F_D501_0B37, 0xA4_D3C2_5E68_DC58)
 }
 
 impl QuantizerParameters {
@@ -448,7 +445,7 @@ impl QuantizerParameters {
   ) -> QuantizerParameters {
     let scale = q57(QSCALE + bit_depth as i32 - 8);
     let quantizer = bexp64(log_target_q + scale);
-    let (offset_u, offset_v) = chroma_offset(log_target_q);
+    let (offset_u, offset_v) = chroma_offset();
     let quantizer_u = bexp64(log_target_q + offset_u + scale);
     let quantizer_v = bexp64(log_target_q + offset_v + scale);
     QuantizerParameters {
