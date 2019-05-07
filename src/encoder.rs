@@ -299,6 +299,7 @@ pub struct FrameState<T: Pixel> {
   pub input: Arc<Frame<T>>,
   pub input_hres: Plane<T>, // half-resolution version of input luma
   pub input_qres: Plane<T>, // quarter-resolution version of input luma
+  pub activity_mask: Plane<u16>,
   pub rec: Frame<T>,
   pub cdfs: CDFContext,
   pub context_update_tile_id: usize, // tile id used for the CDFontext
@@ -329,6 +330,7 @@ impl<T: Pixel> FrameState<T> {
       input: frame,
       input_hres: Plane::new(luma_width / 2, luma_height / 2, 1, 1, luma_padding_x / 2, luma_padding_y / 2),
       input_qres: Plane::new(luma_width / 4, luma_height / 4, 2, 2, luma_padding_x / 4, luma_padding_y / 4),
+      activity_mask: Plane::new(luma_width / 8, luma_height / 8, 3, 3, luma_padding_x / 8, luma_padding_y / 8),
       rec: Frame::new(luma_width, luma_height, fi.sequence.chroma_sampling),
       cdfs: CDFContext::new(0),
       context_update_tile_id: 0,
@@ -345,6 +347,60 @@ impl<T: Pixel> FrameState<T> {
       },
       t: RDOTracker::new()
     }
+  }
+
+  /// Computes the variance of 8x8 blocks of the luma plane and stores twice the
+  /// SD in a decimated (by 8 on both axes) activity plane.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the activity mask is not decimated by 8 on both axes.
+  ///
+  /// Note : The plane is also normalized to a 16-bit scale.
+  pub fn compute_activity_mask(&mut self) {
+    
+    let luma_plane = &self.input.planes[0];
+    let PlaneConfig { width, height, .. } = luma_plane.cfg;
+    let luma = &luma_plane.data;
+    let PlaneConfig { xdec, ydec, .. } = self.activity_mask.cfg;
+    assert!(xdec == 3);
+    assert!(ydec == 3);
+    let width = (width >> xdec) << xdec;
+    let height = (height >> ydec) << ydec;
+    let mut mean = vec![0u32; (width >> xdec) * (height>>ydec)];
+    let mut var = vec![0u32; (width >> xdec) * (height>>ydec)];
+
+    //Computing the mean of each 8x8 block
+    for r in 0..height {
+      for c in 0..width {
+        let luma_offset = luma_plane.index(c, r);
+        let act_offset = (r>>ydec) * (width>>ydec) + (c>>xdec);
+        let temp_luma: u32 = luma[luma_offset].into(); 
+        mean[act_offset] += temp_luma;
+      }
+    }
+    mean.iter_mut().for_each(|sum| *sum >>= xdec+ydec);
+
+    //Computing the variance of each 8x8 block
+    for r in 0..height {
+      for c in 0..width {
+        let luma_offset = luma_plane.index(c, r);
+        let act_offset = (r>>ydec) * (width>>ydec) + (c>>xdec);
+        let temp_luma: u32 = luma[luma_offset].into();
+        let temp_mean: u32 = mean[act_offset];
+        var[act_offset] += (temp_luma as i32 - temp_mean as i32).pow(2) as u32;
+      }
+    }
+    var.iter_mut().for_each(|sum| *sum = (((*sum >> (xdec+ydec)) as f32).sqrt()) as u32 * 2);
+
+    //Activity values are normalized to a 16-bit scale
+    let max = var.iter().max().unwrap();
+    let activity_mask: &mut [u16] = &mut *self.activity_mask.data;
+    activity_mask
+      .iter_mut()
+      .zip(var.iter())
+      .map(|(var1, var2)| *var1 = if *max!=0 {65535 * var2 / max} else {0} as u16 )
+      .for_each(|_| {});
   }
 
   #[inline(always)]
@@ -2314,12 +2370,58 @@ pub fn update_rec_buffer<T: Pixel>(fi: &mut FrameInvariants<T>, fs: FrameState<T
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
   use super::*;
 
   #[test]
   fn check_partition_types_order() {
     assert_eq!(RAV1E_PARTITION_TYPES[RAV1E_PARTITION_TYPES.len() - 1],
                PartitionType::PARTITION_SPLIT);
+  }
+
+  pub fn create_frame(frame_width: usize, frame_height: usize) -> (Frame<u16>, FrameInvariants<u16>) {
+    let mut frame = Frame::<u16>::new(frame_width, frame_height, ChromaSampling::Cs400);
+
+    // Each pixel contains the sum of its row and column indices:
+    //
+    //  0 1 2 3 4 . .
+    //  1 2 3 4 5 . .
+    //  2 3 4 5 6 . .
+    //  3 4 5 6 7 . .
+    //  4 5 6 7 8 . .
+    //  . . . . . . .
+    //  . . . . . . .
+    for plane in &mut frame.planes {
+      let PlaneConfig { width, height, .. } = plane.cfg;
+      let mut slice = plane.as_mut_slice();
+      for col in 0..width {
+        for row in 0..height {
+          slice[row][col] = (row+col) as u16;
+        }
+      }
+    }
+
+    let config = EncoderConfig {
+      width: frame_width,
+      height: frame_height,
+      quantizer: 100,
+      speed_settings: SpeedSettings::from_preset(10),
+      ..Default::default()
+    };
+    let sequence = Sequence::new(&Default::default());
+    let fi = FrameInvariants::new(config, sequence);
+    (frame, fi)
+  }
+
+  #[test]
+  fn check_activity_mask() {
+    let (frame, fi) = create_frame(64, 64);
+    let mut fs = FrameState::new_with_frame(&fi, Arc::new(frame));
+    fs.compute_activity_mask();
+    let actual_mask = &fs.activity_mask.data;
+    //Activity of the source image is uniform and hence the activity is expected
+    // to be the highest 16-bit value throughout the activity plane. 
+    let expected_mask = PlaneData::from_slice(&[65535u16; 64]);
+    actual_mask.iter().zip(expected_mask.iter()).for_each(|(val1, val2)| assert_eq!(val1, val2));
   }
 }
