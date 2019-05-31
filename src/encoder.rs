@@ -300,6 +300,7 @@ pub struct FrameState<T: Pixel> {
   pub input_hres: Plane<T>, // half-resolution version of input luma
   pub input_qres: Plane<T>, // quarter-resolution version of input luma
   pub activity_mask: Plane<u16>,
+  pub activity_mean: u8,
   pub rec: Frame<T>,
   pub cdfs: CDFContext,
   pub context_update_tile_id: usize, // tile id used for the CDFontext
@@ -331,6 +332,7 @@ impl<T: Pixel> FrameState<T> {
       input_hres: Plane::new(luma_width / 2, luma_height / 2, 1, 1, luma_padding_x / 2, luma_padding_y / 2),
       input_qres: Plane::new(luma_width / 4, luma_height / 4, 2, 2, luma_padding_x / 4, luma_padding_y / 4),
       activity_mask: Plane::new(luma_width / 8, luma_height / 8, 3, 3, luma_padding_x / 8, luma_padding_y / 8),
+      activity_mean: 14,
       rec: Frame::new(luma_width, luma_height, fi.sequence.chroma_sampling),
       cdfs: CDFContext::new(0),
       context_update_tile_id: 0,
@@ -391,15 +393,16 @@ impl<T: Pixel> FrameState<T> {
         var[act_offset] += (temp_luma as i32 - temp_mean as i32).pow(2) as u32;
       }
     }
-    var.iter_mut().for_each(|sum| *sum = (((*sum >> (xdec+ydec)) as f32).sqrt()) as u32 * 2);
+    var.iter_mut().for_each(|sum| *sum = (((*sum >> (xdec+ydec-2)) as f32).sqrt()) as u32);
 
     //Activity values are normalized to a 16-bit scale
-    let max = var.iter().max().unwrap();
+    let mean_2std = (var.iter().map(|v| *v as u64).sum::<u64>() << (xdec+ydec)) / (width*height) as u64;
+    self.activity_mean = clamp(mean_2std, 3, 255) as u8;
     let activity_mask: &mut [u16] = &mut *self.activity_mask.data;
     activity_mask
       .iter_mut()
       .zip(var.iter())
-      .map(|(var1, var2)| *var1 = if *max!=0 {65535 * var2 / max} else {0} as u16 )
+      .map(|(var1, var2)| *var1 = *var2 as u16)
       .for_each(|_| {});
   }
 

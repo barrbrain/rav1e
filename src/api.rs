@@ -853,6 +853,10 @@ impl<T: Pixel> ContextInner<T> {
       } else if let Some(f) = self.frame_q.get(&fi.number) {
         if let Some(frame) = f.clone() {
           let fti = fi.get_frame_subtype();
+          if fti == 0 && self.rc_state.needs_trial_encode(fti) {
+            let fs = FrameState::new_with_frame(fi, frame.clone());
+            self.rc_state.record_activity(fs.activity_mean, fti);
+          }
           let qps =
             self.rc_state.select_qi(self, fti, self.maybe_prev_log_base_q);
           let fi = self.frame_invariants.get_mut(&cur_idx).unwrap();

@@ -753,6 +753,7 @@ impl RCState {
         //  immediately replace the default scale factor guess with the
         //  estimate we just computed using the first frame.
         if trial || self.nframes[fti] <= 0 {
+          let diff = log_scale - prev_log_scale;
           let f = &mut self.scalefilter[fti];
           let x = log_scale_q24;
           f.x[0] = x;
@@ -761,6 +762,7 @@ impl RCState {
           f.y[1] = x;
           self.log_scale[fti] = log_scale;
           // TODO: Duplicate regular P frame state for first golden P frame.
+          if !trial { println!("{}", diff) }
         } else {
           // Lengthen the time constant for the inter filters as we collect
           //  more frame statistics, until we reach our target.
@@ -818,6 +820,22 @@ impl RCState {
 
   pub fn needs_trial_encode(&self, fti: usize) -> bool {
       self.target_bitrate > 0 && self.nframes[fti] == 0
+  }
+
+  pub fn record_activity(
+    &mut self, mean_activity: u8, fti: usize
+  ) {
+    if fti != 0 { return }
+    assert!(self.needs_trial_encode(fti));
+    let delta_log_scale = (blog64(mean_activity as i64*14) - q57(8))*75 >> 6;
+    let log_scale = self.log_scale[fti] + delta_log_scale;
+    self.log_scale[fti] = log_scale;
+    let f = &mut self.scalefilter[fti];
+    let x = q57_to_q24(log_scale);
+    f.x[0] = x;
+    f.x[1] = x;
+    f.y[0] = x;
+    f.y[1] = x;
   }
 }
 
