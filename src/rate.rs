@@ -504,11 +504,11 @@ impl RCState {
     // These have been derived by encoding many clips at every quantizer
     // and running a piecewise-linear regression in binary log space.
     let (i_exp, i_log_scale) = if ibpp < 1 {
-      (48u8, blog64(36) - q57(QSCALE))
+      (49u8, blog64(35) - q57(QSCALE))
     } else if ibpp < 4 {
-      (61u8, blog64(55) - q57(QSCALE))
+      (62u8, blog64(53) - q57(QSCALE))
     } else {
-      (77u8, blog64(129) - q57(QSCALE))
+      (78u8, blog64(124) - q57(QSCALE))
     };
     let (p_exp, p_log_scale) = if ibpp < 2 {
       (69u8, blog64(32) - q57(QSCALE))
@@ -827,8 +827,8 @@ impl RCState {
   ) {
     if fti != 0 { return }
     assert!(self.needs_trial_encode(fti));
-    let delta_log_scale = (blog64(mean_activity as i64*14) - q57(8))*75 >> 6;
-    let log_scale = self.log_scale[fti] + delta_log_scale;
+    let delta_log_scale = ((blog64(mean_activity as i64*15) - q57(8)) >> 12)*4799;
+    let log_scale = self.log_scale[fti] - delta_log_scale;
     self.log_scale[fti] = log_scale;
     let f = &mut self.scalefilter[fti];
     let x = q57_to_q24(log_scale);
