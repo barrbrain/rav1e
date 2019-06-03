@@ -727,7 +727,7 @@ impl RCState {
 
   pub fn update_state(
     &mut self, bits: i64, fti: usize, log_target_q: i64, trial: bool,
-    droppable: bool
+    droppable: bool, mean_activity: u8
   ) -> bool {
     if trial {
       assert!(self.needs_trial_encode(fti));
@@ -747,7 +747,11 @@ impl RCState {
       } else {
         // Compute the estimated scale factor for this frame type.
         let log_bits = blog64(bits);
-        let log_scale = (log_bits - self.log_npixels + log_q_exp).min(q57(16));
+        let mut log_scale = (log_bits - self.log_npixels + log_q_exp).min(q57(16));
+        if trial && fti == 0 {
+            log_scale -= ((blog64(mean_activity as i64*15) - q57(8)) >> 12)*234;
+            log_scale += 2171156735362250;
+        }
         let log_scale_q24 = q57_to_q24(log_scale);
         // If this is the first example of the given frame type we've seen, we
         //  immediately replace the default scale factor guess with the
@@ -762,7 +766,7 @@ impl RCState {
           f.y[1] = x;
           self.log_scale[fti] = log_scale;
           // TODO: Duplicate regular P frame state for first golden P frame.
-          if !trial { println!("{}", diff) }
+          if !trial { println!("{} {}", mean_activity, diff) }
         } else {
           // Lengthen the time constant for the inter filters as we collect
           //  more frame statistics, until we reach our target.

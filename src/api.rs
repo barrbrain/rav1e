@@ -852,9 +852,12 @@ impl<T: Pixel> ContextInner<T> {
         self.finalize_packet(rec, &fi)
       } else if let Some(f) = self.frame_q.get(&fi.number) {
         if let Some(frame) = f.clone() {
+          let mut activity = 0u8;
           let fti = fi.get_frame_subtype();
           if fti == 0 && self.rc_state.needs_trial_encode(fti) {
-            let fs = FrameState::new_with_frame(fi, frame.clone());
+            let mut fs = FrameState::new_with_frame(fi, frame.clone());
+            fs.compute_activity_mask();
+            activity = fs.activity_mean;
             self.rc_state.record_activity(fs.activity_mean, fti);
           }
           let qps =
@@ -870,7 +873,8 @@ impl<T: Pixel> ContextInner<T> {
               fti,
               qps.log_target_q,
               true,
-              false
+              false,
+              activity
             );
             let qps =
               self.rc_state.select_qi(self, fti, self.maybe_prev_log_base_q);
@@ -891,7 +895,8 @@ impl<T: Pixel> ContextInner<T> {
             fti,
             qps.log_target_q,
             false,
-            false
+            false,
+            activity
           );
           self.packet_data.extend(data);
 
