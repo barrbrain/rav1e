@@ -355,6 +355,8 @@ fn compute_distortion<T: Pixel>(
     ),
   };
 
+  distortion = (fi.dist_scale[0] * distortion as f64) as u64;
+
   if !luma_only {
     let PlaneConfig { xdec, ydec, .. } = ts.input.planes[1].cfg;
 
@@ -372,7 +374,7 @@ fn compute_distortion<T: Pixel>(
       for p in 1..3 {
         let input_region = ts.input_tile.planes[p].subregion(area);
         let rec_region = ts.rec.planes[p].subregion(area);
-        distortion += sse_wxh(
+        distortion += (sse_wxh(
           &input_region,
           &rec_region,
           w_uv,
@@ -384,7 +386,8 @@ fn compute_distortion<T: Pixel>(
               bsize,
             )
           },
-        );
+        ) as f64
+          * fi.dist_scale[p]) as u64;
       }
     };
   }
@@ -422,6 +425,8 @@ fn compute_tx_distortion<T: Pixel>(
     (tx_dist as f64 * bias) as u64
   };
 
+  distortion = (fi.dist_scale[0] * distortion as f64) as u64;
+
   if !luma_only && skip {
     let PlaneConfig { xdec, ydec, .. } = ts.input.planes[1].cfg;
 
@@ -439,7 +444,7 @@ fn compute_tx_distortion<T: Pixel>(
       for p in 1..3 {
         let input_region = ts.input_tile.planes[p].subregion(area);
         let rec_region = ts.rec.planes[p].subregion(area);
-        distortion += sse_wxh(
+        distortion += (sse_wxh(
           &input_region,
           &rec_region,
           w_uv,
@@ -451,7 +456,8 @@ fn compute_tx_distortion<T: Pixel>(
               bsize,
             )
           },
-        );
+        ) as f64
+          * fi.dist_scale[p]) as u64;
       }
     }
   }
