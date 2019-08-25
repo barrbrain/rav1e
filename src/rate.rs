@@ -574,10 +574,10 @@ impl QuantizerParameters {
     let scale = q57(QSCALE + bit_depth as i32 - 8);
     let quantizer = bexp64(log_target_q + scale);
     let (offset_u, offset_v) = chroma_offset(log_target_q, uv_m_q8);
-    let log_target_q_u = log_target_q + offset_u + scale;
-    let log_target_q_v = log_target_q + offset_v + scale;
-    let quantizer_u = bexp64(log_target_q_u);
-    let quantizer_v = bexp64(log_target_q_v);
+    let log_target_q_u = log_target_q + offset_u;
+    let log_target_q_v = log_target_q + offset_v;
+    let quantizer_u = bexp64(log_target_q_u + scale);
+    let quantizer_v = bexp64(log_target_q_v + scale);
     let lambda = (::std::f64::consts::LN_2 / 6.0)
       * ((log_target_q as f64) * Q57_SQUARE_EXP_SCALE).exp();
     let lambda_u = (::std::f64::consts::LN_2 / 6.0)
