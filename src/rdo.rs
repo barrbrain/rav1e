@@ -1634,7 +1634,7 @@ fn rdo_loop_plane_error<T: Pixel>(
           fi,
           ts.to_frame_block_offset(bo),
           BlockSize::BLOCK_8X8,
-        );
+        ) * fi.dist_scale[pli];
         err += (value as f64 * bias) as u64;
       }
     }
