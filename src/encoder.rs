@@ -1943,7 +1943,7 @@ pub fn write_tx_tree<T: Pixel>(
   assert!(
     !fi.use_tx_domain_distortion || need_recon_pixel || skip || dist >= 0
   );
-  tx_dist += dist;
+  tx_dist += ((dist as f64) * fi.dist_scale[0]) as i64;
 
   if luma_only {
     return tx_dist;
@@ -2021,7 +2021,7 @@ pub fn write_tx_tree<T: Pixel>(
               || skip
               || dist >= 0
           );
-          tx_dist += dist;
+          tx_dist += ((dist as f64) * fi.dist_scale[p]) as i64;
         }
       }
     }
