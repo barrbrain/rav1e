@@ -599,7 +599,7 @@ impl QuantizerParameters {
         select_ac_qi(quantizer_v, bit_depth).max(1),
       ],
       lambda,
-      dist_scale: [1.0, 1.0, 1.0],
+      dist_scale: [2.0, 2.0, 2.0],
     }
   }
 }
