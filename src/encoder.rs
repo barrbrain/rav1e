@@ -1210,6 +1210,7 @@ pub fn encode_tx_block<T: Pixel>(
 
     let tx_dist_scale_bits = 2 * (3 - get_log_tx_scale(tx_size));
     let tx_dist_scale_rounding_offset = 1 << (tx_dist_scale_bits - 1);
+    tx_dist = (tx_dist as f64 * fi.dist_scale[p]) as i64;
     tx_dist = (tx_dist + tx_dist_scale_rounding_offset) >> tx_dist_scale_bits;
   }
   if fi.config.train_rdo {
@@ -1798,7 +1799,6 @@ pub fn write_tx_blocks<T: Pixel>(
     }
   }
 
-  tx_dist = ((tx_dist as f64) * fi.dist_scale[0]) as i64;
   if luma_only {
     return tx_dist;
   };
@@ -1883,7 +1883,7 @@ pub fn write_tx_blocks<T: Pixel>(
               || skip
               || dist >= 0
           );
-          tx_dist += ((dist as f64) * fi.dist_scale[p]) as i64;
+          tx_dist += dist;
         }
       }
     }
@@ -1943,7 +1943,7 @@ pub fn write_tx_tree<T: Pixel>(
   assert!(
     !fi.use_tx_domain_distortion || need_recon_pixel || skip || dist >= 0
   );
-  tx_dist += ((dist as f64) * fi.dist_scale[0]) as i64;
+  tx_dist += dist;
 
   if luma_only {
     return tx_dist;
@@ -2021,7 +2021,7 @@ pub fn write_tx_tree<T: Pixel>(
               || skip
               || dist >= 0
           );
-          tx_dist += ((dist as f64) * fi.dist_scale[p]) as i64;
+          tx_dist += dist;
         }
       }
     }

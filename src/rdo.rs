@@ -405,7 +405,7 @@ fn compute_tx_distortion<T: Pixel>(
   let input_region = ts.input_tile.planes[0].subregion(area);
   let rec_region = ts.rec.planes[0].subregion(area);
   let mut distortion = if skip {
-    sse_wxh(
+    (sse_wxh(
       &input_region,
       &rec_region,
       bsize.width(),
@@ -417,15 +417,13 @@ fn compute_tx_distortion<T: Pixel>(
           bsize,
         )
       },
-    )
+    ) as f64 * fi.dist_scale[0]) as u64
   } else {
     assert!(tx_dist >= 0);
     let bias =
       compute_distortion_bias(fi, ts.to_frame_block_offset(tile_bo), bsize);
     (tx_dist as f64 * bias) as u64
   };
-
-  distortion = (fi.dist_scale[0] * distortion as f64) as u64;
 
   if !luma_only && skip {
     let PlaneConfig { xdec, ydec, .. } = ts.input.planes[1].cfg;
