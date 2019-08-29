@@ -544,7 +544,7 @@ pub fn compute_rd_cost<T: Pixel>(
   fi: &FrameInvariants<T>, rate: u32, distortion: ScaledDistortion,
 ) -> f64 {
   let rate_in_bits = (rate as f64) / ((1 << OD_BITRES) as f64);
-  distortion.0 as f64 * 0.5 + fi.lambda * rate_in_bits
+  distortion.0 as f64 + fi.lambda * rate_in_bits
 }
 
 pub fn rdo_tx_size_type<T: Pixel>(
