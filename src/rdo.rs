@@ -31,6 +31,7 @@ use crate::predict::{
   PredictionMode, RAV1E_INTER_COMPOUND_MODES, RAV1E_INTER_MODES_MINIMAL,
   RAV1E_INTRA_MODES,
 };
+use crate::quantize::ac_q;
 use crate::rdo_tables::*;
 use crate::tiling::*;
 use crate::transform::{TxSet, TxSize, TxType, RAV1E_TX_TYPES};
@@ -703,7 +704,8 @@ fn luma_chroma_mode_rdo<T: Pixel>(
           best.tx_size = tx_size;
           best.tx_type = tx_type;
           best.sidx = sidx;
-          zero_distortion = distortion == 0;
+          let quantizer = ac_q(fi.base_q_idx, 0, fi.sequence.bit_depth) as u64;
+          zero_distortion = distortion <= quantizer * quantizer;
         }
 
         cw.rollback(cw_checkpoint);
