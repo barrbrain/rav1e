@@ -305,11 +305,11 @@ pub fn sse_wxh<T: Pixel, F: Fn(Area, BlockSize) -> f64>(
         // Our block width and height are chosen in such a way as to match 4×4
         // non-subsampled blocks.
         BlockSize::BLOCK_4X4,
-      );
+      ) * 4.;
       sse += (value as f64 * bias) as u64;
     }
   }
-  sse
+  (sse + 2) >> 2
 }
 
 // Compute the pixel-domain distortion for an encode
