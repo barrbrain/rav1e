@@ -7,59 +7,122 @@
 // Media Patent License 1.0 was not distributed with this source code in the
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
-#![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))]
 #![allow(non_upper_case_globals)]
 
-use partition::TxSize;
-use std::mem;
+use crate::transform::TxSize;
+use crate::util::*;
 
-fn get_log_tx_scale(tx_size: TxSize) -> i32 {
-  match tx_size {
-    TxSize::TX_64X64 => 2,
-    TxSize::TX_32X32 => 1,
-    _ => 0
-  }
+use num_traits::*;
+use std::convert::Into;
+use std::mem;
+use std::ops::AddAssign;
+
+pub trait Coefficient:
+  PrimInt
+  + Into<i32>
+  + AsPrimitive<i32>
+  + CastFromPrimitive<i32>
+  + AddAssign
+  + Signed
+  + 'static
+{
+}
+impl Coefficient for i16 {}
+impl Coefficient for i32 {}
+
+pub fn get_log_tx_scale(tx_size: TxSize) -> usize {
+  let num_pixels = tx_size.area();
+
+  Into::<usize>::into(num_pixels > 256)
+    + Into::<usize>::into(num_pixels > 1024)
 }
 
-pub fn dc_q(qindex: u8, bit_depth: usize) -> i16 {
+pub fn dc_q(qindex: u8, delta_q: i8, bit_depth: usize) -> i16 {
   let &table = match bit_depth {
     8 => &dc_qlookup_Q3,
     10 => &dc_qlookup_10_Q3,
     12 => &dc_qlookup_12_Q3,
-    _ => unimplemented!()
+    _ => unimplemented!(),
   };
 
-  table[qindex as usize]
+  table[(qindex as isize + delta_q as isize).max(0).min(255) as usize]
 }
 
-pub fn ac_q(qindex: u8, bit_depth: usize) -> i16 {
+pub fn ac_q(qindex: u8, delta_q: i8, bit_depth: usize) -> i16 {
   let &table = match bit_depth {
     8 => &ac_qlookup_Q3,
     10 => &ac_qlookup_10_Q3,
     12 => &ac_qlookup_12_Q3,
-    _ => unimplemented!()
+    _ => unimplemented!(),
   };
 
-  table[qindex as usize]
+  table[(qindex as isize + delta_q as isize).max(0).min(255) as usize]
+}
+
+// TODO: Handle lossless properly.
+fn select_qi(quantizer: i64, qlookup: &[i16; QINDEX_RANGE]) -> u8 {
+  if quantizer < qlookup[MINQ] as i64 {
+    MINQ as u8
+  } else if quantizer >= qlookup[MAXQ] as i64 {
+    MAXQ as u8
+  } else {
+    match qlookup.binary_search(&(quantizer as i16)) {
+      Ok(qi) => qi as u8,
+      Err(qi) => {
+        debug_assert!(qi > MINQ);
+        debug_assert!(qi <= MAXQ);
+        // Pick the closest quantizer in the log domain.
+        let qthresh = (qlookup[qi - 1] as i32) * (qlookup[qi] as i32);
+        let q2_i32 = (quantizer as i32) * (quantizer as i32);
+        if q2_i32 < qthresh {
+          (qi - 1) as u8
+        } else {
+          qi as u8
+        }
+      }
+    }
+  }
+}
+
+pub fn select_dc_qi(quantizer: i64, bit_depth: usize) -> u8 {
+  let qlookup = match bit_depth {
+    8 => &dc_qlookup_Q3,
+    10 => &dc_qlookup_10_Q3,
+    12 => &dc_qlookup_12_Q3,
+    _ => unimplemented!(),
+  };
+  select_qi(quantizer, qlookup)
+}
+
+pub fn select_ac_qi(quantizer: i64, bit_depth: usize) -> u8 {
+  let qlookup = match bit_depth {
+    8 => &ac_qlookup_Q3,
+    10 => &ac_qlookup_10_Q3,
+    12 => &ac_qlookup_12_Q3,
+    _ => unimplemented!(),
+  };
+  select_qi(quantizer, qlookup)
 }
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct QuantizationContext {
-  log_tx_scale: i32,
+  log_tx_scale: usize,
   dc_quant: u32,
   dc_offset: i32,
   dc_mul_add: (u32, u32, u32),
 
   ac_quant: u32,
-  ac_offset: i32,
-  ac_mul_add: (u32, u32, u32)
+  ac_offset_eob: i32,
+  ac_offset0: i32,
+  ac_offset1: i32,
+  ac_mul_add: (u32, u32, u32),
 }
 
 fn divu_gen(d: u32) -> (u32, u32, u32) {
   let nbits = (mem::size_of_val(&d) as u64) * 8;
   let m = nbits - d.leading_zeros() as u64 - 1;
   if (d & (d - 1)) == 0 {
-    (0xFFFFFFFF, 0xFFFFFFFF, m as u32)
+    (0xFFFF_FFFF, 0xFFFF_FFFF, m as u32)
   } else {
     let d = d as u64;
     let t = (1u64 << (m + nbits)) / d;
@@ -91,6 +154,8 @@ fn divu_pair(x: i32, d: (u32, u32, u32)) -> i32 {
 #[cfg(test)]
 mod test {
   use super::*;
+  use crate::transform::TxSize::*;
+
   #[test]
   fn test_divu_pair() {
     for d in 1..1024 {
@@ -107,72 +172,155 @@ mod test {
 
     println!("{:?}", b);
   }
-}
-
-impl QuantizationContext {
-  pub fn update(
-    &mut self, qindex: u8, tx_size: TxSize, is_intra: bool, bit_depth: usize
-  ) {
-    self.log_tx_scale = get_log_tx_scale(tx_size);
-
-    self.dc_quant = dc_q(qindex, bit_depth) as u32;
-    self.dc_mul_add = divu_gen(self.dc_quant);
-
-    self.ac_quant = ac_q(qindex, bit_depth) as u32;
-    self.ac_mul_add = divu_gen(self.ac_quant);
-
-    self.dc_offset =
-      self.dc_quant as i32 * (if is_intra { 21 } else { 15 }) / 64;
-    self.ac_offset =
-      self.ac_quant as i32 * (if is_intra { 21 } else { 15 }) / 64;
-  }
-
-  #[inline]
-  pub fn quantize(&self, coeffs: &mut [i32]) {
-    coeffs[0] <<= self.log_tx_scale;
-    coeffs[0] += coeffs[0].signum() * self.dc_offset;
-    coeffs[0] = divu_pair(coeffs[0], self.dc_mul_add);
-
-    for c in coeffs[1..].iter_mut() {
-      *c <<= self.log_tx_scale;
-      *c += c.signum() * self.ac_offset;
-      *c = divu_pair(*c, self.ac_mul_add);
+  #[test]
+  fn test_tx_log_scale() {
+    let tx_sizes = [
+      (TX_4X4, 0),
+      (TX_8X8, 0),
+      (TX_16X16, 0),
+      (TX_32X32, 1),
+      (TX_64X64, 2),
+      (TX_4X8, 0),
+      (TX_8X4, 0),
+      (TX_8X16, 0),
+      (TX_16X8, 0),
+      (TX_16X32, 1),
+      (TX_32X16, 1),
+      (TX_32X64, 2),
+      (TX_64X32, 2),
+      (TX_4X16, 0),
+      (TX_16X4, 0),
+      (TX_8X32, 0),
+      (TX_32X8, 0),
+      (TX_16X64, 1),
+      (TX_64X16, 1),
+    ];
+    for &tx_size in tx_sizes.iter() {
+      assert!(tx_size.1 == get_log_tx_scale(tx_size.0));
     }
   }
 }
 
-pub fn quantize_in_place(
-  qindex: u8, coeffs: &mut [i32], tx_size: TxSize, bit_depth: usize
-) {
-  let log_tx_scale = get_log_tx_scale(tx_size);
+impl QuantizationContext {
+  pub fn update(
+    &mut self, qindex: u8, tx_size: TxSize, is_intra: bool, bit_depth: usize,
+    dc_delta_q: i8, ac_delta_q: i8,
+  ) {
+    self.log_tx_scale = get_log_tx_scale(tx_size);
 
-  let dc_quant = dc_q(qindex, bit_depth) as i32;
-  let ac_quant = ac_q(qindex, bit_depth) as i32;
+    self.dc_quant = dc_q(qindex, dc_delta_q, bit_depth) as u32;
+    self.dc_mul_add = divu_gen(self.dc_quant);
 
-  // using 21/64=0.328125 as rounding offset. To be tuned
-  let dc_offset = dc_quant * 21 / 64 as i32;
-  let ac_offset = ac_quant * 21 / 64 as i32;
+    self.ac_quant = ac_q(qindex, ac_delta_q, bit_depth) as u32;
+    self.ac_mul_add = divu_gen(self.ac_quant);
 
-  coeffs[0] <<= log_tx_scale;
-  coeffs[0] += coeffs[0].signum() * dc_offset;
-  coeffs[0] /= dc_quant;
+    // All of these biases were derived by measuring the cost of coding
+    // a zero vs coding a one on any given coefficient position, or, in
+    // the case of the EOB bias, the cost of coding the block with
+    // the chosen EOB (rounding to one) vs rounding to zero and continuing
+    // to choose a new EOB. This was done over several clips, with the
+    // average of the bit costs taken over all blocks in the set, and a new
+    // bias derived via the method outlined in Jean-Marc Valin's
+    // Journal of Dubious Theoretical Results[1], aka:
+    //
+    // lambda = ln(2) / 6.0
+    // threshold = 0.5 + (lambda * avg_rate_diff) / 2.0
+    // bias = 1 - threshold
+    //
+    // lambda is a constant since our offsets are already adjusted for the
+    // quantizer.
+    //
+    // Biases were then updated, and cost collection was re-run, until
+    // the calculated biases started to converge after 2-4 iterations.
+    //
+    // In theory, the rounding biases for inter should be somewhat smaller
+    // than the biases for intra, but this turns out to only be the case
+    // for EOB optimization, or at least, is covered by EOB optimization.
+    // The RD-optimal rounding biases for the actual coefficients seem
+    // to be quite close (+/- 1/256), for both inter and intra,
+    // post-deadzoning.
+    //
+    // [1] https://people.xiph.org/~jm/notes/theoretical_results.pdf
+    self.dc_offset =
+      self.dc_quant as i32 * (if is_intra { 109 } else { 108 }) / 256;
+    self.ac_offset0 =
+      self.ac_quant as i32 * (if is_intra { 98 } else { 97 }) / 256;
+    self.ac_offset1 =
+      self.ac_quant as i32 * (if is_intra { 109 } else { 108 }) / 256;
+    self.ac_offset_eob =
+      self.ac_quant as i32 * (if is_intra { 88 } else { 44 }) / 256;
+  }
 
-  for c in coeffs[1..].iter_mut() {
-    *c <<= log_tx_scale;
-    *c += c.signum() * ac_offset;
-    *c /= ac_quant;
+  #[inline]
+  pub fn quantize<T>(
+    &self, coeffs: &[T], qcoeffs: &mut [T], coded_tx_size: usize,
+  ) where
+    T: Coefficient,
+  {
+    // Find the last non-zero coefficient using our smaller biases and
+    // zero everything else.
+    // This threshold is such that `abs(coeff) < deadzone` implies:
+    // (abs(coeff << log_tx_scale) + ac_offset_eob) / ac_quant == 0
+    let deadzone = (self.ac_quant as usize - self.ac_offset_eob as usize)
+      .align_power_of_two_and_shift(self.log_tx_scale)
+      as i32;
+    let pos =
+      coeffs[1..coded_tx_size].iter().rposition(|c| c.as_().abs() >= deadzone);
+    // We skip the DC coefficient since it has its own quantizer index.
+    let last_pos = pos.map(|pos| pos + 1).unwrap_or(1);
+
+    qcoeffs[0] = coeffs[0] << (self.log_tx_scale as usize);
+    qcoeffs[0] += qcoeffs[0].signum() * T::cast_from(self.dc_offset);
+    qcoeffs[0] = T::cast_from(divu_pair(qcoeffs[0].as_(), self.dc_mul_add));
+
+    // Here we use different rounding biases depending on whether we've
+    // had recent coefficients that are larger than one, or less than
+    // one. The reason for this is that a block usually has a chunk of
+    // large coefficients and a tail of zeroes and ones, and the tradeoffs
+    // for coding these two are different. In the tail of zeroes and ones,
+    // you'll likely end up spending most bits just saying where that
+    // coefficient is in the block, whereas in the chunk of larger
+    // coefficients, most bits will be spent on coding its magnitude.
+    // To that end, we want to bias more toward rounding to zero for
+    // that tail of zeroes and ones than we do for the larger coefficients.
+    let mut level_mode = 1;
+    for (qc, c) in
+      qcoeffs[1..].iter_mut().zip(coeffs[1..].iter()).take(last_pos)
+    {
+      let coeff = *c << self.log_tx_scale;
+      let level0 = T::cast_from(divu_pair(coeff.as_(), self.ac_mul_add));
+      let offset = if level0 > T::cast_from(1 - level_mode) {
+        self.ac_offset1
+      } else {
+        self.ac_offset0
+      };
+      let qcoeff = coeff + (coeff.signum() * T::cast_from(offset));
+      *qc = T::cast_from(divu_pair(qcoeff.as_(), self.ac_mul_add));
+      if level_mode != 0 && *qc == T::cast_from(0) {
+        level_mode = 0;
+      } else if *qc > T::cast_from(1) {
+        level_mode = 1;
+      }
+    }
+
+    let zero_start = coded_tx_size.min(last_pos + 1);
+    if qcoeffs.len() > zero_start {
+      for qc in qcoeffs[zero_start..].iter_mut() {
+        *qc = T::cast_from(0);
+      }
+    }
   }
 }
 
 pub fn dequantize(
   qindex: u8, coeffs: &[i32], rcoeffs: &mut [i32], tx_size: TxSize,
-  bit_depth: usize
+  bit_depth: usize, dc_delta_q: i8, ac_delta_q: i8,
 ) {
   let log_tx_scale = get_log_tx_scale(tx_size) as i32;
   let offset = (1 << log_tx_scale) - 1;
 
-  let dc_quant = dc_q(qindex, bit_depth) as i32;
-  let ac_quant = ac_q(qindex, bit_depth) as i32;
+  let dc_quant = dc_q(qindex, dc_delta_q, bit_depth) as i32;
+  let ac_quant = ac_q(qindex, ac_delta_q, bit_depth) as i32;
 
   for (i, (r, &c)) in rcoeffs.iter_mut().zip(coeffs.iter()).enumerate() {
     let quant = if i == 0 { dc_quant } else { ac_quant };
@@ -185,6 +333,7 @@ const MINQ: usize = 0;
 const MAXQ: usize = 255;
 const QINDEX_RANGE: usize = MAXQ - MINQ + 1;
 
+#[rustfmt::skip]
 static dc_qlookup_Q3: [i16;QINDEX_RANGE] = [
   4,    8,    8,    9,    10,  11,  12,  12,  13,  14,  15,   16,   17,   18,
   19,   19,   20,   21,   22,  23,  24,  25,  26,  26,  27,   28,   29,   30,
@@ -207,6 +356,7 @@ static dc_qlookup_Q3: [i16;QINDEX_RANGE] = [
   1184, 1232, 1282, 1336,
 ];
 
+#[rustfmt::skip]
 static dc_qlookup_10_Q3: [i16;QINDEX_RANGE] = [
   4,    9,    10,   13,   15,   17,   20,   22,   25,   28,   31,   34,   37,
   40,   43,   47,   50,   53,   57,   60,   64,   68,   71,   75,   78,   82,
@@ -230,6 +380,7 @@ static dc_qlookup_10_Q3: [i16;QINDEX_RANGE] = [
   3953, 4089, 4236, 4394, 4559, 4737, 4929, 5130, 5347,
 ];
 
+#[rustfmt::skip]
 static dc_qlookup_12_Q3: [i16;QINDEX_RANGE] = [
   4,     12,    18,    25,    33,    41,    50,    60,    70,    80,    91,
   103,   115,   127,   140,   153,   166,   180,   194,   208,   222,   237,
@@ -257,6 +408,7 @@ static dc_qlookup_12_Q3: [i16;QINDEX_RANGE] = [
   19718, 20521, 21387,
 ];
 
+#[rustfmt::skip]
 static ac_qlookup_Q3: [i16;QINDEX_RANGE] = [
   4,    8,    9,    10,   11,   12,   13,   14,   15,   16,   17,   18,   19,
   20,   21,   22,   23,   24,   25,   26,   27,   28,   29,   30,   31,   32,
@@ -280,6 +432,7 @@ static ac_qlookup_Q3: [i16;QINDEX_RANGE] = [
   1567, 1597, 1628, 1660, 1692, 1725, 1759, 1793, 1828,
 ];
 
+#[rustfmt::skip]
 static ac_qlookup_10_Q3: [i16;QINDEX_RANGE] = [
   4,    9,    11,   13,   16,   18,   21,   24,   27,   30,   33,   37,   40,
   44,   48,   51,   55,   59,   63,   67,   71,   75,   79,   83,   88,   92,
@@ -303,6 +456,7 @@ static ac_qlookup_10_Q3: [i16;QINDEX_RANGE] = [
   6268, 6388, 6512, 6640, 6768, 6900, 7036, 7172, 7312,
 ];
 
+#[rustfmt::skip]
 static ac_qlookup_12_Q3: [i16;QINDEX_RANGE] = [
   4,     13,    19,    27,    35,    44,    54,    64,    75,    87,    99,
   112,   126,   139,   154,   168,   183,   199,   214,   230,   247,   263,

@@ -1,21 +1,128 @@
 language: rust
+dist: bionic
+env:
+  - RUST_BACKTRACE=1
 addons:
   apt:
     packages:
-      - yasm
-      - nasm
-
+      - binutils-dev
+      - libcurl4-openssl-dev
+      - zlib1g-dev
+      - libdw-dev
+      - libiberty-dev
+      - ninja-build
+      - python3-setuptools
+      - python3-pip
+      - python3-wheel
+      - libsdl2-dev
+      - libvulkan-dev
 before_install:
-    - wget -O cmake.sh https://cmake.org/files/v3.10/cmake-3.10.2-Linux-x86_64.sh
-    - sudo sh cmake.sh --skip-license --exclude-subdir --prefix=/usr
-    - sudo rm -fR /usr/local/cmake*
-    - hash -r
-    - which cmake
-    - cmake --version
-script:
-    - |
-        cargo build --verbose &&
-        cargo test --verbose &&
-        cargo test --verbose --release --features=decode_test -- --ignored &&
-        cargo bench --verbose &&
-        cargo doc --verbose
+  - export BUILD_DIR="$TRAVIS_HOME/.build"
+  - export DEPS_DIR="$TRAVIS_HOME/.local"
+  - mkdir -p "$BUILD_DIR"
+  - mkdir -p "$DEPS_DIR/bin"
+  - mkdir -p "$DEPS_DIR/lib/pkgconfig"
+  - export PATH="$PATH:$DEPS_DIR/bin"
+  - export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$DEPS_DIR/lib/pkgconfig:$DEPS_DIR/lib/x86_64-linux-gnu/pkgconfig"
+  - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEPS_DIR/lib:$DEPS_DIR/lib/x86_64-linux-gnu"
+  - pip3 install meson
+  - bash "$TRAVIS_BUILD_DIR/.travis/install-sccache.sh"
+  - export RUSTC_WRAPPER=sccache
+  - export SCCACHE_CACHE_SIZE=500M
+  - export SCCACHE_DIR="$TRAVIS_HOME/.cache/sccache"
+  - sccache --version
+  - bash "$TRAVIS_BUILD_DIR/.travis/install-nasm.sh"
+  - nasm --version
+  - bash "$TRAVIS_BUILD_DIR/.travis/install-kcov.sh"
+  - kcov --version
+  - bash "$TRAVIS_BUILD_DIR/.travis/install-aom.sh"
+  - aomenc --help | grep "AV1 Encoder"
+  - bash "$TRAVIS_BUILD_DIR/.travis/install-dav1d.sh"
+  - dav1d --version
+  - cd "$TRAVIS_BUILD_DIR"
+cache:
+  directories:
+    - $TRAVIS_HOME/.cache/sccache
+    - $TRAVIS_HOME/.local
+
+after_script:
+  - sccache -s
+
+jobs:
+  include:
+    - name: "Code Formatting"
+      rust: stable
+      script:
+        - rustup component add rustfmt
+        - cargo fmt -- --check
+      env:
+        - CACHE_NAME=RUSTFMT
+    - name: "Build & Coveralls"
+      rust: stable
+      script:
+        - which cargo-kcov || cargo install cargo-kcov
+        # We need to run cargo clean to avoid caching issues
+        - cargo clean
+        - RUSTFLAGS="-C link-dead-code" cargo build --features=decode_test,decode_test_dav1d,quick_test --tests --verbose
+        - cargo kcov -v --coveralls --no-clean-rebuild -- --verify --exclude-pattern="$HOME/.cargo,aom_build,.h,test"
+      env:
+        - CACHE_NAME=COVERALLS
+    - name: "Minimum Supported Rustc"
+      # This should reference the earliest supported rustc version
+      # and should match the version number in build.rs
+      rust: 1.36.0
+      script:
+        - cargo test --features=decode_test,decode_test_dav1d,quick_test,capi --verbose
+      env:
+        - CACHE_NAME=MIN_RUSTC
+    - name: "Arm build and test"
+      rust: stable
+      arch: arm64
+      before_install: skip
+      script:
+        - cargo build --release --tests --verbose
+        - cargo test --release --verbose
+    - name: "Ignored Tests (aom)"
+      rust: stable
+      script:
+        - travis_wait 60 cargo test --release --features=decode_test --verbose --color=always -- --color=always --ignored
+      env:
+        - CACHE_NAME=IGNORED_TESTS_AOM
+      branches:
+        only:
+          - master
+    - name: "Ignored Tests (dav1d)"
+      rust: stable
+      script:
+        - travis_wait 60 cargo test --release --features=decode_test_dav1d --verbose --color=always -- --color=always --ignored
+      env:
+        - CACHE_NAME=IGNORED_TESTS_DAV1D
+      branches:
+        only:
+          - master
+    - name: "Bench"
+      rust: stable
+      script: cargo bench --features=bench --no-run --verbose
+      env:
+        - CACHE_NAME=BENCH
+    - name: "Doc & Clippy (linter): verifying code quality"
+      rust: stable
+      script:
+        - cargo doc --verbose --no-deps
+        - rustup component add clippy
+        - cargo clippy --version
+        - cargo clippy -- -D warnings --verbose
+      env:
+        - CACHE_NAME=CLIPPY
+    - name: "No default features"
+      rust: stable
+      script:
+        - cargo check --no-default-features
+      env:
+        - CACHE_NAME=CHECK
+    - name: "Extra features"
+      rust: stable
+      script:
+        - cargo check --features=capi,dump_lookahead_data
+      env:
+        - CACHE_NAME=CHECK_EXTRA_FEATURES

@@ -7,80 +7,371 @@
 // Media Patent License 1.0 was not distributed with this source code in the
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
-extern crate clap;
-extern crate rav1e;
-extern crate y4m;
+#![deny(bare_trait_objects)]
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::cast_ptr_alignment)]
+#![allow(clippy::cognitive_complexity)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::verbose_bit_mask)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::many_single_char_names)]
+
+#[macro_use]
+extern crate err_derive;
+#[macro_use]
+extern crate log;
 
 mod common;
-use common::*;
+mod decoder;
+mod error;
+mod muxer;
+mod stats;
 
-use rav1e::*;
+use crate::common::*;
+use crate::error::*;
+use crate::stats::*;
+use rav1e::prelude::*;
+
+use crate::decoder::Decoder;
+use crate::decoder::VideoDetails;
+use crate::muxer::*;
+use std::env;
+use std::fs::File;
+use std::io::Read;
+use std::io::Seek;
+use std::io::Write;
+use std::sync::Arc;
+
+struct Source<D: Decoder> {
+  limit: usize,
+  count: usize,
+  input: D,
+  #[cfg(all(unix, feature = "signal-hook"))]
+  exit_requested: Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl<D: Decoder> Source<D> {
+  fn read_frame<T: Pixel>(
+    &mut self, ctx: &mut Context<T>, video_info: VideoDetails,
+  ) {
+    if self.limit != 0 && self.count == self.limit {
+      ctx.flush();
+      return;
+    }
+
+    #[cfg(all(unix, feature = "signal-hook"))]
+    {
+      if self.exit_requested.load(std::sync::atomic::Ordering::SeqCst) {
+        ctx.flush();
+        return;
+      }
+    }
+
+    match self.input.read_frame(&video_info) {
+      Ok(frame) => {
+        match video_info.bit_depth {
+          8 | 10 | 12 => {}
+          _ => panic!("unknown input bit depth!"),
+        }
+        self.count += 1;
+        let _ = ctx.send_frame(Some(Arc::new(frame)));
+      }
+      _ => {
+        ctx.flush();
+      }
+    };
+  }
+}
+
+// Encode and write a frame.
+// Returns frame information in a `Result`.
+fn process_frame<T: Pixel, D: Decoder>(
+  ctx: &mut Context<T>, output_file: &mut dyn Muxer, source: &mut Source<D>,
+  pass1file: Option<&mut File>, pass2file: Option<&mut File>,
+  buffer: &mut [u8], buf_pos: &mut usize,
+  mut y4m_enc: Option<&mut y4m::Encoder<'_, Box<dyn Write>>>,
+) -> Result<Option<Vec<FrameSummary>>, CliError> {
+  let y4m_details = source.input.get_video_details();
+  let mut frame_summaries = Vec::new();
+  let mut pass1file = pass1file;
+  let mut pass2file = pass2file;
+  // Submit first pass data to pass 2.
+  if let Some(passfile) = pass2file.as_mut() {
+    loop {
+      let mut bytes = ctx.twopass_bytes_needed();
+      if bytes == 0 {
+        break;
+      }
+      // Read in some more bytes, if necessary.
+      bytes = bytes.min(buffer.len() - *buf_pos);
+      if bytes > 0 {
+        passfile
+          .read_exact(&mut buffer[*buf_pos..*buf_pos + bytes])
+          .expect("Could not read frame data from two-pass data file!");
+      }
+      // And pass them off.
+      let consumed = ctx
+        .twopass_in(&buffer[*buf_pos..*buf_pos + bytes])
+        .expect("Error submitting pass data in second pass.");
+      // If the encoder consumed the whole buffer, reset it.
+      if consumed >= bytes {
+        *buf_pos = 0;
+      } else {
+        *buf_pos += consumed;
+      }
+    }
+  }
+  // Extract first pass data from pass 1.
+  // We call this before encoding any frames to ensure we are in 2-pass mode
+  //  and to get the placeholder header data.
+  if let Some(passfile) = pass1file.as_mut() {
+    if let Some(outbuf) = ctx.twopass_out() {
+      passfile
+        .write_all(outbuf)
+        .expect("Unable to write to two-pass data file.");
+    }
+  }
+
+  let pkt_wrapped = ctx.receive_packet();
+  match pkt_wrapped {
+    Ok(pkt) => {
+      output_file.write_frame(
+        pkt.input_frameno as u64,
+        pkt.data.as_ref(),
+        pkt.frame_type,
+      );
+      if let (Some(ref mut y4m_enc_uw), Some(ref rec)) =
+        (y4m_enc.as_mut(), &pkt.rec)
+      {
+        write_y4m_frame(y4m_enc_uw, rec, y4m_details);
+      }
+      frame_summaries.push(pkt.into());
+    }
+    Err(EncoderStatus::NeedMoreData) => {
+      source.read_frame(ctx, y4m_details);
+    }
+    Err(EncoderStatus::EnoughData) => {
+      unreachable!();
+    }
+    Err(EncoderStatus::LimitReached) => {
+      if let Some(passfile) = pass1file.as_mut() {
+        if let Some(outbuf) = ctx.twopass_out() {
+          // The last block of data we get is the summary data that needs to go
+          //  at the start of the pass file.
+          // Seek to the start so we can write it there.
+          passfile
+            .seek(std::io::SeekFrom::Start(0))
+            .expect("Unable to seek in two-pass data file.");
+          passfile
+            .write_all(outbuf)
+            .expect("Unable to write to two-pass data file.");
+        }
+      }
+      return Ok(None);
+    }
+    e @ Err(EncoderStatus::Failure) => {
+      let _ = e.map_err(|e| e.context("Failed to encode video"))?;
+    }
+    e @ Err(EncoderStatus::NotReady) => {
+      let _ = e.map_err(|e| {
+        e.context("Mismanaged handling of two-pass stats data")
+      })?;
+    }
+    Err(EncoderStatus::Encoded) => {}
+  }
+  Ok(Some(frame_summaries))
+}
+
+fn do_encode<T: Pixel, D: Decoder>(
+  cfg: Config, verbose: bool, mut progress: ProgressInfo,
+  output: &mut dyn Muxer, source: &mut Source<D>,
+  pass1file_name: Option<&String>, pass2file_name: Option<&String>,
+  mut y4m_enc: Option<y4m::Encoder<'_, Box<dyn Write>>>,
+) -> Result<(), CliError> {
+  let mut ctx: Context<T> =
+    cfg.new_context().map_err(|e| e.context("Invalid encoder settings"))?;
+
+  let mut pass2file = pass2file_name.map(|f| {
+    File::open(f).unwrap_or_else(|_| {
+      panic!("Unable to open \"{}\" for reading two-pass data.", f)
+    })
+  });
+  let mut pass1file = pass1file_name.map(|f| {
+    File::create(f).unwrap_or_else(|_| {
+      panic!("Unable to open \"{}\" for writing two-pass data.", f)
+    })
+  });
+
+  let mut buffer: [u8; 80] = [0; 80];
+  let mut buf_pos = 0;
+
+  while let Some(frame_info) = process_frame(
+    &mut ctx,
+    &mut *output,
+    source,
+    pass1file.as_mut(),
+    pass2file.as_mut(),
+    &mut buffer,
+    &mut buf_pos,
+    y4m_enc.as_mut(),
+  )? {
+    for frame in frame_info {
+      progress.add_frame(frame.clone());
+      if verbose {
+        info!("{} - {}", frame, progress);
+      } else {
+        // Print a one-line progress indicator that overrides itself with every update
+        eprint!("\r{}                    ", progress);
+      };
+    }
+
+    output.flush().unwrap();
+  }
+  if !verbose {
+    // Clear out the temporary progress indicator
+    eprint!("\r");
+  }
+  progress.print_summary(verbose);
+  Ok(())
+}
 
 fn main() {
-  let (mut io, enc, limit) = parse_cli();
-  let mut y4m_dec = y4m::decode(&mut io.input).unwrap();
-  let width = y4m_dec.get_width();
-  let height = y4m_dec.get_height();
-  let framerate = y4m_dec.get_framerate();
-  let color_space = y4m_dec.get_colorspace();
+  better_panic::install();
+  init_logger();
 
-  let mut count = 0;
-  let mut y4m_enc = match io.rec.as_mut() {
+  match run() {
+    Ok(()) => {}
+    Err(e) => error::print_error(&e),
+  }
+}
+
+fn init_logger() {
+  if env::var("RUST_LOG").is_err() {
+    env::set_var("RUST_LOG", "info");
+  }
+  pretty_env_logger::init();
+}
+
+fn run() -> Result<(), error::CliError> {
+  let mut cli = parse_cli()?;
+  let mut y4m_dec =
+    y4m::decode(&mut cli.io.input).expect("input is not a y4m file");
+  let video_info = y4m_dec.get_video_details();
+  let y4m_enc = match cli.io.rec.as_mut() {
     Some(rec) => Some(
-      y4m::encode(width, height, framerate)
-        .with_colorspace(color_space)
-        .write_header(rec)
-        .unwrap()
+      y4m::encode(
+        video_info.width,
+        video_info.height,
+        y4m::Ratio::new(
+          video_info.time_base.den as usize,
+          video_info.time_base.num as usize,
+        ),
+      )
+      .with_colorspace(y4m_dec.get_colorspace())
+      .write_header(rec)
+      .unwrap(),
     ),
-    None => None
+    None => None,
   };
 
-  let chroma_sampling = match color_space {
-    y4m::Colorspace::C420
-    | y4m::Colorspace::C420jpeg
-    | y4m::Colorspace::C420paldv
-    | y4m::Colorspace::C420mpeg2
-    | y4m::Colorspace::C420p10
-    | y4m::Colorspace::C420p12 => ChromaSampling::Cs420,
-    y4m::Colorspace::C422
-    | y4m::Colorspace::C422p10
-    | y4m::Colorspace::C422p12 => ChromaSampling::Cs422,
-    y4m::Colorspace::C444
-    | y4m::Colorspace::C444p10
-    | y4m::Colorspace::C444p12 => ChromaSampling::Cs444,
-    _ => panic!("Chroma sampling unknown for the specified color space.")
-  };
+  cli.enc.width = video_info.width;
+  cli.enc.height = video_info.height;
+  cli.enc.bit_depth = video_info.bit_depth;
+  cli.enc.chroma_sampling = video_info.chroma_sampling;
+  cli.enc.chroma_sample_position = video_info.chroma_sample_position;
 
-  let bit_depth = color_space.get_bit_depth();
+  // If no pixel range is specified via CLI, assume limited,
+  // as it is the default for the Y4M format.
+  if !cli.color_range_specified {
+    cli.enc.pixel_range = PixelRange::Limited;
+  }
 
-  let cfg = Config {
-    frame_info: FrameInfo { width, height, bit_depth, chroma_sampling },
-    timebase: Ratio::new(framerate.den, framerate.num),
-    enc
-  };
+  cli.enc.time_base = video_info.time_base;
+  let cfg = Config { enc: cli.enc, threads: cli.threads };
 
-  let mut ctx = cfg.new_context();
-
-  write_ivf_header(
-    &mut io.output,
-    width,
-    height,
-    framerate.num,
-    framerate.den
+  cli.io.output.write_header(
+    video_info.width,
+    video_info.height,
+    video_info.time_base.den as usize,
+    video_info.time_base.num as usize,
   );
 
-  loop {
-    if !process_frame(&mut ctx, &mut io.output, &mut y4m_dec, y4m_enc.as_mut())
-    {
-      break;
-    }
+  info!(
+    "Using y4m decoder: {}x{}p @ {}/{} fps, {}, {}-bit",
+    video_info.width,
+    video_info.height,
+    video_info.time_base.den,
+    video_info.time_base.num,
+    video_info.chroma_sampling,
+    video_info.bit_depth
+  );
+  info!("Encoding settings: {}", cfg.enc);
 
-    count += 1;
+  let progress = ProgressInfo::new(
+    Rational { num: video_info.time_base.den, den: video_info.time_base.num },
+    if cli.limit == 0 { None } else { Some(cli.limit) },
+    cfg.enc.show_psnr,
+  );
 
-    if limit != 0 && count >= limit {
-      break;
-    }
-
-    io.output.flush().unwrap();
+  for _ in 0..cli.skip {
+    y4m_dec.read_frame().expect("Skipped more frames than in the input");
   }
+
+  #[cfg(all(unix, feature = "signal-hook"))]
+  let exit_requested = {
+    use std::sync::atomic::*;
+    let e = Arc::new(AtomicBool::from(false));
+
+    fn setup_signal(sig: i32, e: Arc<AtomicBool>) {
+      unsafe {
+        signal_hook::register(sig, move || {
+          if e.load(Ordering::SeqCst) {
+            std::process::exit(128 + sig);
+          }
+          e.store(true, Ordering::SeqCst);
+          info!("Exit requested, flushing.");
+        })
+        .expect("Cannot register the signal hooks");
+      }
+    }
+
+    setup_signal(signal_hook::SIGTERM, e.clone());
+    setup_signal(signal_hook::SIGQUIT, e.clone());
+    setup_signal(signal_hook::SIGINT, e.clone());
+
+    e
+  };
+
+  #[cfg(all(unix, feature = "signal-hook"))]
+  let mut source =
+    Source { limit: cli.limit, input: y4m_dec, count: 0, exit_requested };
+  #[cfg(not(all(unix, feature = "signal-hook")))]
+  let mut source = Source { limit: cli.limit, input: y4m_dec, count: 0 };
+
+  if video_info.bit_depth == 8 {
+    do_encode::<u8, y4m::Decoder<'_, Box<dyn Read>>>(
+      cfg,
+      cli.verbose,
+      progress,
+      &mut *cli.io.output,
+      &mut source,
+      cli.pass1file_name.as_ref(),
+      cli.pass2file_name.as_ref(),
+      y4m_enc,
+    )?
+  } else {
+    do_encode::<u16, y4m::Decoder<'_, Box<dyn Read>>>(
+      cfg,
+      cli.verbose,
+      progress,
+      &mut *cli.io.output,
+      &mut source,
+      cli.pass1file_name.as_ref(),
+      cli.pass2file_name.as_ref(),
+      y4m_enc,
+    )?
+  }
+
+  Ok(())
 }
