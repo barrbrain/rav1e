@@ -33,9 +33,7 @@ impl CpuFeatureLevel {
 
 impl Default for CpuFeatureLevel {
   fn default() -> CpuFeatureLevel {
-    let detected: CpuFeatureLevel = if is_x86_feature_detected!("avx2") {
-      CpuFeatureLevel::AVX2
-    } else if is_x86_feature_detected!("ssse3") {
+    let detected: CpuFeatureLevel = if is_x86_feature_detected!("ssse3") {
       CpuFeatureLevel::SSSE3
     } else if is_x86_feature_detected!("sse2") {
       CpuFeatureLevel::SSE2
