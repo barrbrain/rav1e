@@ -17,7 +17,7 @@ mod x86 {
   use arg_enum_proc_macro::ArgEnum;
   use std::env;
 
-  #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, ArgEnum)]
+  #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum)]
   pub enum CpuFeatureLevel {
     NATIVE,
     SSE2,
@@ -63,7 +63,7 @@ mod x86 {
         detected
       } else {
         manual
-      }
+      }.min(CpuFeatureLevel::SSSE3)
     }
   }
 }
