@@ -1841,7 +1841,7 @@ pub fn rdo_loop_decision<T: Pixel>(
               loop_sbo,
               loop_tile_sbo,
               cdef_index,
-              &cdef_dirs[sby][sbx],
+              &cdef_dirs[sby * sb_w + sbx],
             );
             // apply LRF if any
             for pli in 0..PLANES {
@@ -1979,7 +1979,7 @@ pub fn rdo_loop_decision<T: Pixel>(
             loop_sbo,
             loop_tile_sbo,
             best_index[sby * sb_w + sbx] as u8,
-            &cdef_dirs[sby][sbx],
+            &cdef_dirs[sby * sb_w + sbx],
           );
         }
       }
