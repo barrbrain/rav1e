@@ -1712,25 +1712,15 @@ fn rdo_loop_plane_error<T: Pixel>(
   err * fi.dist_scale[pli]
 }
 
-struct RDOLoopState<T: Pixel> {
+struct LruDimensions {
   sb_w: usize,
   sb_h: usize,
   lru_w: [usize; PLANES],
   lru_h: [usize; PLANES],
-  best_index: Vec<i8>,
-  best_lrf: ArrayVec<[Vec<RestorationFilter>; 3]>,
-  best_lrf_cost: ArrayVec<[Vec<f64>; 3]>,
-  cdef_input: Option<Frame<u16>>,
-  cdef_dirs: Option<Vec<CdefDirections>>,
-  lrf_input: Frame<T>,
-  lrf_output: Frame<T>,
 }
 
-impl<T: Pixel> RDOLoopState<T> {
-  pub fn new(
-    tile_sbo: TileSuperBlockOffset, fi: &FrameInvariants<T>,
-    ts: &mut TileStateMut<'_, T>, blocks: &TileBlocks<'_>,
-  ) -> Self {
+impl LruDimensions {
+  pub fn new<T: Pixel>(ts: &TileStateMut<'_, T>) -> Self {
     // Determine area of optimization: Which plane has the largest LRUs?
     // How many LRUs for each?
     let mut sb_w = 1; // how many superblocks wide the largest LRU
@@ -1755,6 +1745,28 @@ impl<T: Pixel> RDOLoopState<T> {
       lru_w[pli] = sb_w / (1 << sb_h_shift);
       lru_h[pli] = sb_h / (1 << sb_v_shift);
     }
+    LruDimensions { sb_w, sb_h, lru_w, lru_h }
+  }
+}
+
+struct RDOLoopState<T: Pixel> {
+  lru_dimensions: LruDimensions,
+  best_index: Vec<i8>,
+  best_lrf: ArrayVec<[Vec<RestorationFilter>; 3]>,
+  best_lrf_cost: ArrayVec<[Vec<f64>; 3]>,
+  cdef_input: Option<Frame<u16>>,
+  cdef_dirs: Option<Vec<CdefDirections>>,
+  lrf_input: Frame<T>,
+  lrf_output: Frame<T>,
+}
+
+impl<T: Pixel> RDOLoopState<T> {
+  pub fn new(
+    tile_sbo: TileSuperBlockOffset, fi: &FrameInvariants<T>,
+    lru_dimensions: LruDimensions, const_rec: &Tile<T>,
+    blocks: &TileBlocks<'_>,
+  ) -> Self {
+    let LruDimensions { sb_w, sb_h, lru_w, lru_h } = lru_dimensions;
     let best_index = vec![-1; sb_w * sb_h];
     let mut best_lrf = ArrayVec::<[Vec<RestorationFilter>; 3]>::new();
     // due to imprecision in the reconstruction parameter solver, we
@@ -1770,14 +1782,13 @@ impl<T: Pixel> RDOLoopState<T> {
     // Construct a largest-LRU-sized padded frame to filter from,
     // and a largest-LRU-sized padded frame to test-filter into
     // all stages; reconstruction goes to cdef so it must be additionally padded
-    let const_rec = ts.rec.as_const();
     let mut lrf_input = cdef_sb_frame(fi, sb_w, sb_h, &const_rec);
     let lrf_output = cdef_sb_frame(fi, sb_w, sb_h, &const_rec);
     // Initialize cdef output
     for pli in 0..PLANES {
-      let po = tile_sbo.plane_offset(&ts.rec.planes[pli].plane_cfg);
+      let po = tile_sbo.plane_offset(&const_rec.planes[pli].plane_cfg);
       let rec_region =
-        ts.rec.planes[pli].subregion(Area::StartingAt { x: po.x, y: po.y });
+        const_rec.planes[pli].subregion(Area::StartingAt { x: po.x, y: po.y });
       let width = lrf_input.planes[pli].cfg.width.min(rec_region.rect().width);
       let height =
         lrf_input.planes[pli].cfg.height.min(rec_region.rect().height);
@@ -1809,10 +1820,7 @@ impl<T: Pixel> RDOLoopState<T> {
       )
     });
     RDOLoopState {
-      sb_w,
-      sb_h,
-      lru_w,
-      lru_h,
+      lru_dimensions,
       best_index,
       best_lrf,
       best_lrf_cost,
@@ -1833,8 +1841,13 @@ pub fn rdo_loop_decision<T: Pixel>(
   ts: &mut TileStateMut<'_, T>, cw: &mut ContextWriter, w: &mut dyn Writer,
 ) {
   assert!(fi.sequence.enable_cdef || fi.sequence.enable_restoration);
-  let mut state =
-    RDOLoopState::new(tile_sbo, fi, ts, &cw.bc.blocks.as_const());
+  let mut state = RDOLoopState::new(
+    tile_sbo,
+    fi,
+    LruDimensions::new(ts),
+    &ts.rec.as_const(),
+    &cw.bc.blocks.as_const(),
+  );
 
   // CDEF/LRF decision iteration
   // Start with a default of CDEF 0 and RestorationFilter::None
@@ -1842,7 +1855,7 @@ pub fn rdo_loop_decision<T: Pixel>(
   // Then try all LRF options with current CDEFs; if new CDEFs+LRF choice is better, select it.
   // If LRF choice changed for any plane, repeat until no changes
   // Limit iterations and where we break based on speed setting (in the TODO list ;-)
-  let RDOLoopState { sb_w, sb_h, lru_w, lru_h, .. } = state;
+  let LruDimensions { sb_w, sb_h, lru_w, lru_h } = state.lru_dimensions;
   let cdef_data = state.cdef_input.iter().zip(state.cdef_dirs.iter()).next();
 
   let mut cdef_change = true;
