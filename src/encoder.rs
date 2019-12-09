@@ -2781,8 +2781,16 @@ pub(crate) fn build_coarse_pmvs<T: Pixel>(
         {
           let r = fi.ref_frames[i] as usize;
           if pmvs[r].is_none() {
+            let left = if sbx > 0 {
+              frame_pmvs.last().and_then(
+                |left_pmvs: &[Option<MotionVector>; REF_FRAMES]| left_pmvs[r],
+              )
+            } else {
+              None
+            }
+            .unwrap_or(MotionVector::default());
             pmvs[r] =
-              estimate_motion_ss4(fi, ts, BlockSize::BLOCK_64X64, r, bo);
+              estimate_motion_ss4(fi, ts, BlockSize::BLOCK_64X64, r, bo, left);
           }
         }
         frame_pmvs.push(pmvs);

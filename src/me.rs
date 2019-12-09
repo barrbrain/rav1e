@@ -1037,7 +1037,7 @@ fn get_mv_rate(
 
 pub fn estimate_motion_ss4<T: Pixel>(
   fi: &FrameInvariants<T>, ts: &TileStateMut<'_, T>, bsize: BlockSize,
-  ref_idx: usize, tile_bo: TileBlockOffset,
+  ref_idx: usize, tile_bo: TileBlockOffset, left_mv: MotionVector,
 ) -> Option<MotionVector> {
   if let Some(ref rec) = fi.rec_buffer.frames[ref_idx] {
     let blk_w = bsize.width();
@@ -1079,7 +1079,7 @@ pub fn estimate_motion_ss4<T: Pixel>(
       po,
       1,
       lambda,
-      [MotionVector::default(); 2],
+      [MotionVector::default(), left_mv],
       fi.allow_high_precision_mv,
     );
 
