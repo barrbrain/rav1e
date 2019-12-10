@@ -321,7 +321,7 @@ impl Default for SpeedSettings {
       cdef: true,
       use_satd_subpel: true,
       non_square_partition: true,
-      enable_segmentation: false,
+      enable_segmentation: true,
     }
   }
 }
@@ -359,7 +359,7 @@ impl SpeedSettings {
       cdef: Self::cdef_preset(speed),
       use_satd_subpel: Self::use_satd_subpel(speed),
       non_square_partition: Self::non_square_partition_preset(speed),
-      enable_segmentation: false,
+      enable_segmentation: true,
     }
   }
 

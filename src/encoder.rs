@@ -805,6 +805,9 @@ impl<T: Pixel> FrameInvariants<T> {
       (ref_in_previous_group.to_index()) as u32
     };
 
+    // disable segmentation for the base of the pyramid
+    fi.enable_segmentation = fi.config.speed_settings.enable_segmentation &&
+        fi.pyramid_level > 0;
     if fi.pyramid_level == 0 {
       // level 0 has no forward references
       // default to last P frame
