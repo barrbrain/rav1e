@@ -188,9 +188,12 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
   // Use sums to calculate distortion
   let svar = sum_s2 - ((sum_s * sum_s + 32) >> 6);
   let sse = (sum_d2 + sum_s2 - 2 * sum_sd) as f64;
+  // Temporary constants to match old distribution of scaling.
   let ssim_boost = (4033_f64 / 16_384_f64)
     * (svar + svar + (16_384 << (2 * coeff_shift))) as f64
-    / f64::sqrt(((16_265_089i64 << (4 * coeff_shift)) + svar * svar) as f64);
+    / f64::sqrt(((16_265_089i64 << (4 * coeff_shift)) + svar * svar) as f64)
+    * 0.869_873_046_875f64
+    + 0.150_146_484_375f64;
   RawDistortion::new((sse * ssim_boost + 0.5_f64) as u64)
 }
 
