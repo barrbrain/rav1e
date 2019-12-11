@@ -148,7 +148,6 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
 
   // Sum into columns to improve auto-vectorization
   let mut sum_s_cols: [u16; 8] = [0; 8];
-  let mut sum_d_cols: [u16; 8] = [0; 8];
   let mut sum_s2_cols: [u32; 8] = [0; 8];
   let mut sum_d2_cols: [u32; 8] = [0; 8];
   let mut sum_sd_cols: [u32; 8] = [0; 8];
@@ -156,9 +155,8 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
   for j in 0..8 {
     let row1 = &src1[j][0..8];
     let row2 = &src2[j][0..8];
-    for (sum_s, sum_d, sum_s2, sum_d2, sum_sd, s, d) in izip!(
+    for (sum_s, sum_s2, sum_d2, sum_sd, s, d) in izip!(
       &mut sum_s_cols,
-      &mut sum_d_cols,
       &mut sum_s2_cols,
       &mut sum_d2_cols,
       &mut sum_sd_cols,
@@ -169,7 +167,6 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
       let s: u16 = u16::cast_from(*s);
       let d: u16 = u16::cast_from(*d);
       *sum_s += s;
-      *sum_d += d;
 
       // Convert to u32 to avoid overflows when multiplying
       let s: u32 = s as u32;
@@ -184,20 +181,16 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
   // Sum together the sum of columns
   let sum_s: i64 =
     sum_s_cols.iter().map(|&a| u32::cast_from(a)).sum::<u32>() as i64;
-  let sum_d: i64 =
-    sum_d_cols.iter().map(|&a| u32::cast_from(a)).sum::<u32>() as i64;
   let sum_s2: i64 = sum_s2_cols.iter().sum::<u32>() as i64;
   let sum_d2: i64 = sum_d2_cols.iter().sum::<u32>() as i64;
   let sum_sd: i64 = sum_sd_cols.iter().sum::<u32>() as i64;
 
   // Use sums to calculate distortion
   let svar = sum_s2 - ((sum_s * sum_s + 32) >> 6);
-  let dvar = sum_d2 - ((sum_d * sum_d + 32) >> 6);
   let sse = (sum_d2 + sum_s2 - 2 * sum_sd) as f64;
-  //The two constants were tuned for CDEF, but can probably be better tuned for use in general RDO
   let ssim_boost = (4033_f64 / 16_384_f64)
-    * (svar + dvar + (16_384 << (2 * coeff_shift))) as f64
-    / f64::sqrt(((16_265_089i64 << (4 * coeff_shift)) + svar * dvar) as f64);
+    * (svar + svar + (16_384 << (2 * coeff_shift))) as f64
+    / f64::sqrt(((16_265_089i64 << (4 * coeff_shift)) + svar * svar) as f64);
   RawDistortion::new((sse * ssim_boost + 0.5_f64) as u64)
 }
 
