@@ -162,8 +162,8 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
   let ssim_boost = (4033_f64 / 16_384_f64)
     * (svar + svar + (16_384 << (2 * coeff_shift)) as f64)
     / f64::sqrt((16_265_089u64 << (4 * coeff_shift)) as f64 + svar * svar)
-    * 0.556f64
-    + 0.500f64;
+    * 0.966_611f64
+    + 0.036_120f64;
   RawDistortion::new((sse * ssim_boost + 0.5_f64) as u64)
 }
 
