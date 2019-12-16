@@ -599,6 +599,29 @@ fn luma_chroma_mode_rdo<T: Pixel>(
     // If skip is true or segmentation is turned off, sidx is not coded.
     let sidx_range = if skip || !fi.enable_segmentation {
       0..=0
+    } else if !fi.config.speed_settings.quantizer_rdo {
+      let scale = compute_distortion_scale(
+        fi,
+        ts.to_frame_block_offset(tile_bo),
+        bsize,
+      );
+      // Chosen based on the RDO segment ID statistics for speed 6 on the
+      // objective-1-fast set at QP 80.
+      let heuristic_sidx = match scale {
+        x if x > 2.67 => 2,
+        x if x < 1.63 => 1,
+        _ => 0,
+      };
+      // prevent the highest sidx from bringing us into lossless
+      if fi.base_q_idx as i16
+        + ts.segmentation.data[heuristic_sidx as usize]
+          [SegLvl::SEG_LVL_ALT_Q as usize]
+        < 1
+      {
+        0..=0
+      } else {
+        heuristic_sidx..=heuristic_sidx
+      }
     } else if fi.base_q_idx as i16
       + ts.segmentation.data[2][SegLvl::SEG_LVL_ALT_Q as usize]
       < 1
