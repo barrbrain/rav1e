@@ -690,6 +690,20 @@ fn luma_chroma_mode_rdo<T: Pixel>(
       }
     }
 
+    {
+      use byteorder::{LittleEndian, WriteBytesExt};
+      use std::io::{self, Write};
+      let mut buf = ArrayVec::<[u8; 16]>::new();
+      let scale = compute_distortion_scale(
+        fi,
+        ts.to_frame_block_offset(tile_bo),
+        bsize,
+      );
+      buf.write_f64::<LittleEndian>(scale).unwrap();
+      buf.write_f64::<LittleEndian>([0., 1., -1.][best.sidx as usize]).unwrap();
+      io::stdout().write_all(&buf).unwrap();
+    }
+
     zero_distortion
   };
 
