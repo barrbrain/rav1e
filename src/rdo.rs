@@ -450,7 +450,7 @@ pub fn compute_distortion_scale<T: Pixel>(
     return 1.; // no scaling
   }
 
-  let strength = 1.0; // empirical, see comment above
+  let strength = 2.0; // empirical, see comment above
   let frac = (total_intra_cost + total_propagate_cost) / total_intra_cost;
   frac.powf(strength / 3.0)
 }
@@ -605,8 +605,8 @@ fn luma_chroma_mode_rdo<T: Pixel>(
       // Chosen based on the RDO segment ID statistics for speed 6 on the
       // objective-1-fast set at QP 80.
       let heuristic_sidx = match scale {
-        x if x < 2.03 => 0,
-        x if x > 2.65 => 2,
+        x if x < 4.13 => 0,
+        x if x > 7.02 => 2,
         _ => 1,
       };
       // prevent the highest sidx from bringing us into lossless

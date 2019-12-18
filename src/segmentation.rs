@@ -29,7 +29,7 @@ pub fn segmentation_optimize<T: Pixel>(
       return;
     }
 
-    const TEMPORAL_RDO_QI_DELTA: i16 = 12;
+    const TEMPORAL_RDO_QI_DELTA: i16 = 24;
 
     // Avoid going into lossless mode by never bringing qidx below 1.
     // Because base_q_idx changes more frequently than the segmentation
