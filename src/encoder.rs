@@ -1085,6 +1085,7 @@ fn write_obus<T: Pixel>(
 }
 
 /// Write into `dst` the difference between the blocks at `src1` and `src2`
+#[inline(never)]
 fn diff<T: Pixel>(
   dst: &mut [i16], src1: &PlaneRegion<'_, T>, src2: &PlaneRegion<'_, T>,
   width: usize, height: usize,

@@ -3945,6 +3945,7 @@ impl<'a> ContextWriter<'a> {
     mag + 14
   }
 
+  #[inline(never)]
   pub fn write_coeffs_lv_map<T: Coefficient>(
     &mut self, w: &mut dyn Writer, plane: usize, bo: TileBlockOffset,
     coeffs_in: &[T], eob: usize, pred_mode: PredictionMode, tx_size: TxSize,

@@ -237,7 +237,7 @@ impl QuantizationContext {
       self.ac_quant as i32 * (if is_intra { 88 } else { 44 }) / 256;
   }
 
-  #[inline]
+  #[inline(never)]
   pub fn quantize<T>(
     &self, coeffs: &[T], qcoeffs: &mut [T], tx_size: TxSize, tx_type: TxType,
   ) -> usize
@@ -323,6 +323,7 @@ impl QuantizationContext {
   }
 }
 
+#[inline(never)]
 pub fn dequantize<T: Coefficient>(
   qindex: u8, coeffs: &[T], _eob: usize, rcoeffs: &mut [T], tx_size: TxSize,
   bit_depth: usize, dc_delta_q: i8, ac_delta_q: i8,
