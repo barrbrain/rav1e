@@ -34,6 +34,9 @@ impl<A> AlignedArray<A> {
   pub fn uninitialized() -> Self {
     Self::new(unsafe { MaybeUninit::uninit().assume_init() })
   }
+  pub fn zeroed() -> Self {
+    unsafe { MaybeUninit::<Self>::zeroed().assume_init() }
+  }
 }
 
 #[test]

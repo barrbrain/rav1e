@@ -246,11 +246,8 @@ impl QuantizationContext {
   {
     let scan = av1_scan_orders[tx_size as usize][tx_type as usize].scan;
 
-    // Rather than zeroing the tail in scan order, initially zero all
-    // quantized coefficients to elide branches.
-    for qc in qcoeffs[..scan.len()].iter_mut() {
-      *qc = T::cast_from(0);
-    }
+    // Rather than zeroing the tail in scan order, assume that qcoeffs is
+    // pre-filled with zeros.
 
     qcoeffs[0] = {
       let coeff: i32 =
