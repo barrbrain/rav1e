@@ -246,6 +246,12 @@ impl QuantizationContext {
   {
     let scan = av1_scan_orders[tx_size as usize][tx_type as usize].scan;
 
+    // Rather than zeroing the tail in scan order, initially zero all
+    // quantized coefficients to elide branches.
+    for qc in qcoeffs[..scan.len()].iter_mut() {
+      *qc = T::cast_from(0);
+    }
+
     qcoeffs[0] = {
       let coeff: i32 =
         i32::cast_from(coeffs[0]) << (self.log_tx_scale as usize);
@@ -303,10 +309,6 @@ impl QuantizationContext {
       } else if qcoeff.abs() > T::cast_from(1) {
         level_mode = 1;
       }
-    }
-
-    for &pos in scan.iter().skip(eob) {
-      qcoeffs[pos as usize] = T::cast_from(0);
     }
 
     // Check the eob is correct
