@@ -41,6 +41,7 @@ pub trait AlignedZeros<T> {
 }
 
 impl<T> AlignedZeros<T> for AlignedArray<[T; 32 * 32]> {
+  #[inline]
   fn zeros(&mut self, len: usize) -> &mut [T] {
     let slice = &mut self.array[..len];
     unsafe { slice.as_mut_ptr().write_bytes(0u8, len) }
