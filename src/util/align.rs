@@ -36,6 +36,18 @@ impl<A> AlignedArray<A> {
   }
 }
 
+pub trait AlignedZeros<T> {
+  fn zeros(&mut self, len: usize) -> &mut [T];
+}
+
+impl<T> AlignedZeros<T> for AlignedArray<[T; 32 * 32]> {
+  fn zeros(&mut self, len: usize) -> &mut [T] {
+    let slice = &mut self.array[..len];
+    unsafe { slice.as_mut_ptr().write_bytes(0u8, len) }
+    slice
+  }
+}
+
 #[test]
 fn sanity() {
   fn is_aligned<T>(ptr: *const T, n: usize) -> bool {

@@ -1197,13 +1197,13 @@ pub fn encode_tx_block<T: Pixel>(
     AlignedArray::uninitialized();
   let mut coeffs_storage: AlignedArray<[T::Coeff; 64 * 64]> =
     AlignedArray::uninitialized();
-  let mut qcoeffs_storage =
-    AlignedArray::new([T::Coeff::cast_from(0); 32 * 32]);
+  let mut qcoeffs_storage: AlignedArray<[T::Coeff; 32 * 32]> =
+    AlignedArray::uninitialized();
   let mut rcoeffs_storage: AlignedArray<[T::Coeff; 32 * 32]> =
     AlignedArray::uninitialized();
   let residual = &mut residual_storage.array[..tx_size.area()];
   let coeffs = &mut coeffs_storage.array[..tx_size.area()];
-  let qcoeffs = &mut qcoeffs_storage.array[..coded_tx_area];
+  let qcoeffs = qcoeffs_storage.zeros(coded_tx_area);
   let rcoeffs = &mut rcoeffs_storage.array[..coded_tx_area];
 
   diff(
