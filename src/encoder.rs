@@ -336,6 +336,7 @@ pub struct FrameState<T: Pixel> {
   pub input: Arc<Frame<T>>,
   pub input_hres: Arc<Plane<T>>, // half-resolution version of input luma
   pub input_qres: Arc<Plane<T>>, // quarter-resolution version of input luma
+  pub activity_mask: Arc<ActivityMask>,
   pub rec: Arc<Frame<T>>,
   pub cdfs: CDFContext,
   pub context_update_tile_id: usize, // tile id used for the CDFontext
@@ -388,12 +389,14 @@ impl<T: Pixel> FrameState<T> {
     );
     qres.downsample_from(&hres);
     qres.pad(fi.width, fi.height);
+    let activity_mask = ActivityMask::from_plane(&frame.planes[0]);
 
     Self {
       sb_size_log2: fi.sb_size_log2(),
       input: frame,
       input_hres: Arc::new(hres),
       input_qres: Arc::new(qres),
+      activity_mask: Arc::new(activity_mask),
       rec: Arc::new(Frame::new(
         luma_width,
         luma_height,
@@ -571,7 +574,6 @@ pub struct FrameInvariants<T: Pixel> {
 
   /// Target CPU feature level.
   pub cpu_feature_level: crate::cpu_features::CpuFeatureLevel,
-  pub activity_mask: ActivityMask,
   pub enable_segmentation: bool,
 }
 
@@ -743,7 +745,6 @@ impl<T: Pixel> FrameInvariants<T> {
       // dynamic allocation: once per frame
       block_importances: vec![0.; w_in_imp_b * h_in_imp_b].into_boxed_slice(),
       cpu_feature_level: Default::default(),
-      activity_mask: Default::default(),
       enable_segmentation: config.speed_settings.enable_segmentation,
     }
   }

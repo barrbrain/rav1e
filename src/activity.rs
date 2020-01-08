@@ -15,10 +15,10 @@ use crate::util::*;
 pub struct ActivityMask {
   variances: Vec<f64>,
   // Width and height of the original frame that is masked
-  width: usize,
-  height: usize,
+  pub width: usize,
+  pub height: usize,
   // Side of unit (square) activity block in log2
-  granularity: usize,
+  pub granularity: usize,
 }
 
 impl ActivityMask {
@@ -75,7 +75,7 @@ impl ActivityMask {
   pub fn variance_at(&self, x: usize, y: usize) -> Option<f64> {
     let (dec_width, dec_height) =
       (self.width >> self.granularity, self.height >> self.granularity);
-    if x > dec_width || y > dec_height {
+    if x >= dec_width || y >= dec_height {
       None
     } else {
       Some(*self.variances.get(x + dec_width * y).unwrap())

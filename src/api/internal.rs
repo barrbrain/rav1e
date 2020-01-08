@@ -8,7 +8,6 @@
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 #![deny(missing_docs)]
 
-use crate::activity::ActivityMask;
 use crate::api::lookahead::*;
 use crate::api::{EncoderConfig, EncoderStatus, FrameType, Packet};
 use crate::dist::get_satd;
@@ -576,6 +575,18 @@ impl<T: Pixel> ContextInner<T> {
         |x, y| image::Luma([plane.p(x as usize, y as usize).as_()]),
       )
       .save(format!("{}-hres.png", fi.input_frameno))
+      .unwrap();
+      let am = &fs.activity_mask;
+      image::GrayImage::from_fn(am.width as u32, am.height as u32, |x, y| {
+        image::Luma([am
+          .variance_at(
+            x as usize >> am.granularity,
+            y as usize >> am.granularity,
+          )
+          .unwrap_or_default()
+          .sqrt() as _])
+      })
+      .save(format!("{}-variance.png", fi.input_frameno))
       .unwrap();
     }
 
@@ -1169,9 +1180,6 @@ impl<T: Pixel> ContextInner<T> {
             );
             frame_data.fi.set_quantizers(&qps);
           }
-
-          frame_data.fi.activity_mask =
-            ActivityMask::from_plane(&frame_data.fs.input.planes[0]);
 
           let data =
             encode_frame(&frame_data.fi, &mut frame_data.fs, &self.inter_cfg);
