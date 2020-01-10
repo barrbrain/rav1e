@@ -136,6 +136,8 @@ pub fn estimate_rate(qindex: u8, ts: TxSize, fast_distortion: u64) -> u64 {
 fn cdef_dist_wxh_8x8<T: Pixel>(
   src1: &PlaneRegion<'_, T>, src2: &PlaneRegion<'_, T>, bit_depth: usize, svar: f64,
 ) -> RawDistortion {
+  use byteorder::{LittleEndian, WriteBytesExt};
+  use std::io::{self, Write};
   debug_assert!(src1.plane_cfg.xdec == 0);
   debug_assert!(src1.plane_cfg.ydec == 0);
   debug_assert!(src2.plane_cfg.xdec == 0);
@@ -143,7 +145,7 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
 
   let coeff_shift = bit_depth - 8;
 
-  // let mut sum_s: i32 = 0;
+  let mut sum_s: i32 = 0;
   let mut sum_s2: i64 = 0;
   let mut sum_d2: i64 = 0;
   let mut sum_sd: i64 = 0;
@@ -151,13 +153,20 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
     for i in 0..8 {
       let s: i32 = src1[j][i].as_();
       let d: i32 = src2[j][i].as_();
-      // sum_s += s;
+      sum_s += s;
       sum_s2 += (s * s) as i64;
       sum_d2 += (d * d) as i64;
       sum_sd += (s * d) as i64;
     }
   }
-  // let svar = (sum_s2 - ((sum_s as i64 * sum_s as i64 + 32) >> 6)) as f64;
+  let svar_orig = ((sum_s2 << 6) - (sum_s as i64 * sum_s as i64)) as f64 / 64.0;
+  if svar != Default::default() {
+    let mut buf = ArrayVec::<[u8; 16]>::new();
+    buf.write_f64::<LittleEndian>(svar).unwrap();
+    buf.write_f64::<LittleEndian>(svar_orig).unwrap();
+    io::stdout().write_all(&buf);
+  }
+  let svar = svar_orig;
   let sse = (sum_d2 + sum_s2 - 2 * sum_sd) as f64;
   // Linear fit at QP 80 to the function including reconstruction variance.
   let ssim_boost = (4033_f64 / 16_384_f64)
@@ -188,7 +197,12 @@ fn cdef_dist_wxh<T: Pixel, F: Fn(Area, BlockSize) -> f64>(
         &src1.subregion(area),
         &src2.subregion(area),
         bit_depth,
-        activity_mask.variance_at(src1.rect().x as usize, src1.rect().y as usize).unwrap(),
+        activity_mask
+          .variance_at(
+            (src1.rect().x + i * 8) as usize,
+            (src1.rect().y + j * 8) as usize,
+          )
+          .unwrap_or_default(),
       );
 
       // cdef is always called on non-subsampled planes, so BLOCK_8X8 is
@@ -1700,7 +1714,13 @@ fn rdo_loop_plane_error<T: Pixel>(
           ts.to_frame_block_offset(bo),
           BlockSize::BLOCK_8X8,
         );
-        let block_variance = fi.activity_mask.variance_at(in_region.rect().x as usize, in_region.rect().y as usize).unwrap();
+        let block_variance = fi
+          .activity_mask
+          .variance_at(
+            in_region.rect().x as usize,
+            in_region.rect().y as usize,
+          )
+          .unwrap_or_default();
         err += if pli == 0 {
           cdef_dist_wxh_8x8(&in_region, &test_region, fi.sequence.bit_depth, block_variance)
             * bias
