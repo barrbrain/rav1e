@@ -75,9 +75,10 @@ impl ActivityMask {
   }
 
   pub fn variance_at(&self, x: usize, y: usize) -> Option<f64> {
+    let (x, y) = (x >> self.granularity, y >> self.granularity);
     let (dec_width, dec_height) =
       (self.width >> self.granularity, self.height >> self.granularity);
-    if x > dec_width || y > dec_height {
+    if x >= dec_width || y >= dec_height {
       None
     } else {
       Some(*self.variances.get(x + dec_width * y).unwrap())
