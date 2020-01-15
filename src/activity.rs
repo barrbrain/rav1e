@@ -15,6 +15,7 @@ use crate::util::*;
 #[derive(Debug, Default, Clone)]
 pub struct ActivityMask {
   variances: Vec<f64>,
+  scales: Vec<f64>,
   // Width and height of the original frame that is masked
   width: usize,
   height: usize,
@@ -24,7 +25,9 @@ pub struct ActivityMask {
 
 impl ActivityMask {
   #[hawktracer(activity_mask_from_plane)]
-  pub fn from_plane<T: Pixel>(luma_plane: &Plane<T>) -> ActivityMask {
+  pub fn from_plane<T: Pixel>(
+    luma_plane: &Plane<T>, bit_depth: usize,
+  ) -> ActivityMask {
     let PlaneConfig { width, height, .. } = luma_plane.cfg;
 
     let granularity = 3;
@@ -71,7 +74,22 @@ impl ActivityMask {
         variances.push(variance);
       }
     }
-    ActivityMask { variances, width, height, granularity }
+
+    let coeff_shift = bit_depth - 8;
+    let scales = variances
+      .iter()
+      .map(|svar| {
+        let svar = *svar as i64;
+        (4033_f64 / 16_384_f64)
+          * (svar + svar + (16_384 << (2 * coeff_shift))) as f64
+          / f64::sqrt(
+            ((16_265_089i64 << (4 * coeff_shift)) + svar * svar) as f64,
+          )
+          * 0.869_873_046_875f64
+          + 0.150_146_484_375f64
+      })
+      .collect::<Vec<f64>>();
+    ActivityMask { variances, scales, width, height, granularity }
   }
 
   pub fn variance_at(&self, x: usize, y: usize) -> Option<f64> {
@@ -82,6 +100,17 @@ impl ActivityMask {
       None
     } else {
       Some(*self.variances.get(x + dec_width * y).unwrap())
+    }
+  }
+
+  pub fn scale_at(&self, x: usize, y: usize) -> f64 {
+    let (x, y) = (x >> self.granularity, y >> self.granularity);
+    let (dec_width, dec_height) =
+      (self.width >> self.granularity, self.height >> self.granularity);
+    if x >= dec_width || y >= dec_height {
+      1.0
+    } else {
+      self.scales[x + dec_width * y]
     }
   }
 

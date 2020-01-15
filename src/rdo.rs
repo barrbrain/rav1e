@@ -138,15 +138,12 @@ pub fn estimate_rate(qindex: u8, ts: TxSize, fast_distortion: u64) -> u64 {
 // The microbenchmarks perform better with inlining turned off
 #[inline(never)]
 fn cdef_dist_wxh_8x8<T: Pixel>(
-  src1: &PlaneRegion<'_, T>, src2: &PlaneRegion<'_, T>, bit_depth: usize,
-  svar: i64,
+  src1: &PlaneRegion<'_, T>, src2: &PlaneRegion<'_, T>, ssim_boost: f64,
 ) -> RawDistortion {
   debug_assert!(src1.plane_cfg.xdec == 0);
   debug_assert!(src1.plane_cfg.ydec == 0);
   debug_assert!(src2.plane_cfg.xdec == 0);
   debug_assert!(src2.plane_cfg.ydec == 0);
-
-  let coeff_shift = bit_depth - 8;
 
   // Sum into columns to improve auto-vectorization
   let mut sum_s2_cols: [u32; 8] = [0; 8];
@@ -180,12 +177,6 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
 
   // Use sums to calculate distortion
   let sse = (sum_d2 + sum_s2 - 2 * sum_sd) as f64;
-  // Linear fit at QP 80 to the function including reconstruction variance
-  let ssim_boost = (4033_f64 / 16_384_f64)
-    * (svar + svar + (16_384 << (2 * coeff_shift))) as f64
-    / f64::sqrt(((16_265_089i64 << (4 * coeff_shift)) + svar * svar) as f64)
-    * 0.869_873_046_875f64
-    + 0.150_146_484_375f64;
   RawDistortion::new((sse * ssim_boost + 0.5_f64) as u64)
 }
 
@@ -208,13 +199,10 @@ pub fn cdef_dist_wxh<T: Pixel, F: Fn(Area, BlockSize) -> f64>(
       let value = cdef_dist_wxh_8x8(
         &src1.subregion(area),
         &src2.subregion(area),
-        bit_depth,
-        activity_mask
-          .variance_at(
-            (src1.rect().x + i * 8) as usize,
-            (src1.rect().y + j * 8) as usize,
-          )
-          .unwrap_or_default() as i64,
+        activity_mask.scale_at(
+          (src1.rect().x + i * 8) as usize,
+          (src1.rect().y + j * 8) as usize,
+        ),
       );
 
       // cdef is always called on non-subsampled planes, so BLOCK_8X8 is
@@ -1793,23 +1781,14 @@ fn rdo_loop_plane_error<T: Pixel>(
           ts.to_frame_block_offset(bo),
           BlockSize::BLOCK_8X8,
         );
-        let block_variance = fi
+        let ssim_boost = fi
           .activity_mask
-          .variance_at(
-            in_region.rect().x as usize,
-            in_region.rect().y as usize,
-          )
-          .unwrap_or_default() as i64;
+          .scale_at(in_region.rect().x as usize, in_region.rect().y as usize);
         err += if pli == 0 {
           // For loop filters, We intentionally use cdef_dist even with
           // `--tune Psnr`. Using SSE instead gives no PSNR gain but has a
           // significant negative impact on other metrics and visual quality.
-          cdef_dist_wxh_8x8(
-            &in_region,
-            &test_region,
-            fi.sequence.bit_depth,
-            block_variance,
-          ) * bias
+          cdef_dist_wxh_8x8(&in_region, &test_region, ssim_boost) * bias
         } else {
           sse_wxh(&in_region, &test_region, 8 >> xdec, 8 >> ydec, |_, _| bias)
         };

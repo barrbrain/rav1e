@@ -1150,8 +1150,10 @@ impl<T: Pixel> ContextInner<T> {
         frame_data.fi.set_quantizers(&qps);
       }
 
-      frame_data.fi.activity_mask =
-        ActivityMask::from_plane(&frame_data.fs.input.planes[0]);
+      frame_data.fi.activity_mask = ActivityMask::from_plane(
+        &frame_data.fs.input.planes[0],
+        frame_data.fi.sequence.bit_depth,
+      );
 
       let data =
         encode_frame(&frame_data.fi, &mut frame_data.fs, &self.inter_cfg);
