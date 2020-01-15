@@ -101,6 +101,7 @@ impl ActivityMask {
     ActivityMask { variances, scales, width, height, granularity }
   }
 
+  #[inline(always)]
   pub fn variance_at(&self, x: usize, y: usize) -> Option<i64> {
     let (x, y) = (x >> self.granularity, y >> self.granularity);
     let (dec_width, dec_height) =
@@ -112,6 +113,7 @@ impl ActivityMask {
     }
   }
 
+  #[inline(always)]
   pub fn scale_at(&self, x: usize, y: usize) -> f64 {
     let (x, y) = (x >> self.granularity, y >> self.granularity);
     let (dec_width, dec_height) =
