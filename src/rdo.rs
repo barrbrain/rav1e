@@ -145,39 +145,21 @@ fn cdef_dist_wxh_8x8<T: Pixel>(
   debug_assert!(src2.plane_cfg.xdec == 0);
   debug_assert!(src2.plane_cfg.ydec == 0);
 
-  // Sum into columns to improve auto-vectorization
-  let mut sum_s2_cols: [u32; 8] = [0; 8];
-  let mut sum_d2_cols: [u32; 8] = [0; 8];
-  let mut sum_sd_cols: [u32; 8] = [0; 8];
-
+  let mut sse = 0;
   for j in 0..8 {
     let row1 = &src1[j][0..8];
     let row2 = &src2[j][0..8];
-    for (sum_s2, sum_d2, sum_sd, s, d) in
-      izip!(&mut sum_s2_cols, &mut sum_d2_cols, &mut sum_sd_cols, row1, row2)
-    {
-      // Don't convert directly to u32 to allow better vectorization
-      let s: u16 = u16::cast_from(*s);
-      let d: u16 = u16::cast_from(*d);
-
-      // Convert to u32 to avoid overflows when multiplying
-      let s: u32 = s as u32;
-      let d: u32 = d as u32;
-
-      *sum_s2 += s * s;
-      *sum_d2 += d * d;
-      *sum_sd += s * d;
-    }
+    let row_sse = row1
+      .iter()
+      .zip(row2)
+      .map(|(&a, &b)| {
+        let c = (i16::cast_from(a) - i16::cast_from(b)) as i32;
+        (c * c) as u32
+      })
+      .sum::<u32>();
+    sse += row_sse as u64;
   }
-
-  // Sum together the sum of columns
-  let sum_s2: i64 = sum_s2_cols.iter().sum::<u32>() as i64;
-  let sum_d2: i64 = sum_d2_cols.iter().sum::<u32>() as i64;
-  let sum_sd: i64 = sum_sd_cols.iter().sum::<u32>() as i64;
-
-  // Use sums to calculate distortion
-  let sse = (sum_d2 + sum_s2 - 2 * sum_sd) as f64;
-  RawDistortion::new((sse * ssim_boost + 0.5_f64) as u64)
+  RawDistortion::new((sse as f64 * ssim_boost + 0.5_f64) as u64)
 }
 
 #[allow(unused)]
