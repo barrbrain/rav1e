@@ -1753,6 +1753,10 @@ pub fn rdo_partition_decision<T: Pixel, W: Writer>(
       continue;
     }
 
+    if best_partition == PARTITION_NONE && best_pred_modes[0].skip {
+      continue;
+    }
+
     let mut child_modes = ArrayVec::<[_; 4]>::new();
 
     let cost = match partition {
