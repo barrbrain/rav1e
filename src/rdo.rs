@@ -687,7 +687,7 @@ fn luma_chroma_mode_rdo<T: Pixel>(
   let zero_dist_bound = {
     use crate::quantize::ac_q;
     let q = ac_q(fi.base_q_idx, 0, fi.sequence.bit_depth) as u32;
-    ((q * q) >> (12 - bsize.width_log2() - bsize.height_log2())) as u64
+    (q * q) as u64
   };
 
   // Find the best chroma prediction mode for the current luma prediction mode
