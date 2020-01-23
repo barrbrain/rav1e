@@ -684,6 +684,12 @@ fn luma_chroma_mode_rdo<T: Pixel>(
 
   let is_chroma_block = has_chroma(tile_bo, bsize, xdec, ydec);
 
+  let zero_dist_bound = {
+    use crate::quantize::ac_q;
+    let q = ac_q(fi.base_q_idx, 0, fi.sequence.bit_depth) as u32;
+    ((q * q) << 1 >> (12 - bsize.width_log2() - bsize.height_log2())) as u64
+  };
+
   // Find the best chroma prediction mode for the current luma prediction mode
   let mut chroma_rdo = |skip: bool| -> bool {
     let mut zero_distortion = false;
@@ -762,7 +768,7 @@ fn luma_chroma_mode_rdo<T: Pixel>(
         } else {
           compute_distortion(fi, ts, bsize, is_chroma_block, tile_bo, false)
         };
-        let is_zero_dist = distortion.0 == 0;
+        let is_zero_dist = distortion.0 <= zero_dist_bound;
         let rd = compute_rd_cost(fi, rate, distortion);
         if rd < best.rd_cost {
           //if rd < best.rd_cost || luma_mode == PredictionMode::NEW_NEWMV {
