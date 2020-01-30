@@ -16,7 +16,7 @@ use crate::context::*;
 use crate::dist::*;
 use crate::ec::{Writer, WriterCounter, OD_BITRES};
 use crate::encode_block_with_modes;
-use crate::encoder::{FrameInvariants, IMPORTANCE_BLOCK_SIZE};
+use crate::encoder::{FrameInvariants, IMPORTANCE_BLOCK_SIZE, VarianceStats};
 use crate::frame::Frame;
 use crate::frame::*;
 use crate::header::ReferenceMode;
@@ -675,6 +675,7 @@ fn luma_chroma_mode_rdo<T: Pixel>(
       for &chroma_mode in mode_set_chroma.iter() {
         let wr = &mut WriterCounter::new();
         let tell = wr.tell_frac();
+        let mut vstats: Vec<VarianceStats> = Vec::new();
 
         if bsize >= BlockSize::BLOCK_8X8 && bsize.is_sqr() {
           cw.write_partition(
@@ -695,6 +696,7 @@ fn luma_chroma_mode_rdo<T: Pixel>(
           ts,
           cw,
           wr,
+          &mut vstats,
           luma_mode,
           chroma_mode,
           ref_frames,
@@ -745,6 +747,7 @@ fn luma_chroma_mode_rdo<T: Pixel>(
         }
 
         cw.rollback(cw_checkpoint);
+        vstats.truncate(0);
       }
     }
 
@@ -1138,12 +1141,14 @@ pub fn rdo_mode_decision<T: Pixel>(
     let chroma_mode = PredictionMode::UV_CFL_PRED;
     let cw_checkpoint = cw.checkpoint();
     let wr: &mut dyn Writer = &mut WriterCounter::new();
+    let mut vstats: Vec<VarianceStats> = Vec::new();
 
     write_tx_blocks(
       fi,
       ts,
       cw,
       wr,
+      &mut vstats,
       best.mode_luma,
       best.mode_luma,
       tile_bo,
@@ -1157,6 +1162,7 @@ pub fn rdo_mode_decision<T: Pixel>(
       true,
     );
     cw.rollback(&cw_checkpoint);
+    vstats.truncate(0);
     if let Some(cfl) = rdo_cfl_alpha(
       ts,
       tile_bo,
@@ -1166,6 +1172,7 @@ pub fn rdo_mode_decision<T: Pixel>(
     ) {
       let wr: &mut dyn Writer = &mut WriterCounter::new();
       let tell = wr.tell_frac();
+      let mut vstats: Vec<VarianceStats> = Vec::new();
 
       encode_block_pre_cdef(
         &fi.sequence,
@@ -1181,6 +1188,7 @@ pub fn rdo_mode_decision<T: Pixel>(
         ts,
         cw,
         wr,
+        &mut vstats,
         best.mode_luma,
         chroma_mode,
         best.ref_frames,
@@ -1212,6 +1220,7 @@ pub fn rdo_mode_decision<T: Pixel>(
       }
 
       cw.rollback(&cw_checkpoint);
+      vstats.truncate(0);
     }
   }
 
@@ -1353,12 +1362,14 @@ pub fn rdo_tx_type_decision<T: Pixel>(
 
     let wr: &mut dyn Writer = &mut WriterCounter::new();
     let tell = wr.tell_frac();
+    let mut vstats: Vec<VarianceStats> = Vec::new();
     let (_, tx_dist) = if is_inter {
       write_tx_tree(
         fi,
         ts,
         cw,
         wr,
+        &mut vstats,
         mode,
         tile_bo,
         bsize,
@@ -1375,6 +1386,7 @@ pub fn rdo_tx_type_decision<T: Pixel>(
         ts,
         cw,
         wr,
+        &mut vstats,
         mode,
         mode,
         tile_bo,
@@ -1411,6 +1423,7 @@ pub fn rdo_tx_type_decision<T: Pixel>(
     }
 
     cw.rollback(&cw_checkpoint);
+    vstats.truncate(0);
   }
 
   assert!(best_rd >= 0_f64);
@@ -1480,6 +1493,7 @@ pub fn get_sub_partitions_with_border_check(
 pub fn rdo_partition_decision<T: Pixel, W: Writer>(
   fi: &FrameInvariants<T>, ts: &mut TileStateMut<'_, T>,
   cw: &mut ContextWriter, w_pre_cdef: &mut W, w_post_cdef: &mut W,
+  vstats: &mut Vec<VarianceStats>,
   bsize: BlockSize, tile_bo: TileBlockOffset, cached_block: &RDOOutput,
   pmvs: &mut [[Option<MotionVector>; REF_FRAMES]; 5],
   partition_types: &[PartitionType], rdo_type: RDOType,
@@ -1492,6 +1506,7 @@ pub fn rdo_partition_decision<T: Pixel, W: Writer>(
   let cw_checkpoint = cw.checkpoint();
   let w_pre_checkpoint = w_pre_cdef.checkpoint();
   let w_post_checkpoint = w_post_cdef.checkpoint();
+  let vstats_checkpoint = vstats.len();
 
   for &partition in partition_types {
     // Do not re-encode results we already have
@@ -1614,6 +1629,7 @@ pub fn rdo_partition_decision<T: Pixel, W: Writer>(
             cw,
             w_pre_cdef,
             w_post_cdef,
+            vstats,
             subsize,
             offset,
             &mode_decision,
@@ -1640,6 +1656,7 @@ pub fn rdo_partition_decision<T: Pixel, W: Writer>(
     cw.rollback(&cw_checkpoint);
     w_pre_cdef.rollback(&w_pre_checkpoint);
     w_post_cdef.rollback(&w_post_checkpoint);
+    vstats.truncate(vstats_checkpoint);
   }
 
   assert!(best_rd >= 0_f64);
