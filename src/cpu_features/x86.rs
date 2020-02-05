@@ -34,27 +34,9 @@ impl CpuFeatureLevel {
 }
 
 impl Default for CpuFeatureLevel {
+  #[inline(always)]
   fn default() -> CpuFeatureLevel {
-    let detected: CpuFeatureLevel = if is_x86_feature_detected!("avx2") {
-      CpuFeatureLevel::AVX2
-    } else if is_x86_feature_detected!("sse4.1") {
-      CpuFeatureLevel::SSE4_1
-    } else if is_x86_feature_detected!("ssse3") {
-      CpuFeatureLevel::SSSE3
-    } else if is_x86_feature_detected!("sse2") {
-      CpuFeatureLevel::SSE2
-    } else {
-      CpuFeatureLevel::NATIVE
-    };
-    let manual: CpuFeatureLevel = match env::var("RAV1E_CPU_TARGET") {
-      Ok(feature) => CpuFeatureLevel::from_str(&feature).unwrap_or(detected),
-      Err(_e) => detected,
-    };
-    if manual > detected {
-      detected
-    } else {
-      manual
-    }
+    CpuFeatureLevel::AVX2
   }
 }
 
