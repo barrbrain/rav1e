@@ -1279,10 +1279,13 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
   modes.iter().take(num_modes_rdo).for_each(|&luma_mode| {
     let mvs = [MotionVector::default(); 2];
     let ref_frames = [INTRA_FRAME, NONE_FRAME];
-    let mut mode_set_chroma = ArrayVec::<[_; 2]>::new();
+    let mut mode_set_chroma = ArrayVec::<[_; 3]>::new();
     mode_set_chroma.push(luma_mode);
     if is_chroma_block && luma_mode != PredictionMode::DC_PRED {
       mode_set_chroma.push(PredictionMode::DC_PRED);
+    }
+    if is_chroma_block && luma_mode != PredictionMode::SMOOTH_PRED {
+      mode_set_chroma.push(PredictionMode::SMOOTH_PRED);
     }
     luma_chroma_mode_rdo(
       luma_mode,
