@@ -1838,9 +1838,10 @@ pub fn encode_block_post_cdef<T: Pixel>(
 pub fn luma_ac<T: Pixel>(
   ac: &mut [i16], ts: &mut TileStateMut<'_, T>, tile_bo: TileBlockOffset,
   bsize: BlockSize,
-) {
+) -> u32 {
   let PlaneConfig { xdec, ydec, .. } = ts.input.planes[1].cfg;
   let plane_bsize = bsize.subsampled_size(xdec, ydec);
+  let ac = &mut ac[..plane_bsize.width() * plane_bsize.height()];
   let bo = if bsize.is_sub8x8(xdec, ydec) {
     let offset = bsize.sub8x8_offset(xdec, ydec);
     tile_bo.with_offset(offset.0, offset.1)
@@ -1871,11 +1872,12 @@ pub fn luma_ac<T: Pixel>(
   }
   let shift = plane_bsize.width_log2() + plane_bsize.height_log2();
   let average = ((sum + (1 << (shift - 1))) >> shift) as i16;
-  for sub_y in 0..plane_bsize.height() {
-    for sub_x in 0..plane_bsize.width() {
-      ac[sub_y * plane_bsize.width() + sub_x] -= average;
-    }
+  let mut luma_var: i64 = 0;
+  for v in ac {
+    *v -= average;
+    luma_var += (*v as i32).pow(2) as i64;
   }
+  ((luma_var + (1 << (shift - 1))) >> shift) as u32
 }
 
 pub fn write_tx_blocks<T: Pixel>(

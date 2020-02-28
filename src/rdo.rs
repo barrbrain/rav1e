@@ -1366,7 +1366,16 @@ pub fn rdo_cfl_alpha<T: Pixel>(
   debug_assert!(bsize.subsampled_size(xdec, ydec) == uv_tx_size.block_size());
 
   let mut ac: Aligned<[i16; 32 * 32]> = Aligned::uninitialized();
-  luma_ac(&mut ac.data, ts, tile_bo, bsize);
+  {
+    use crate::quantize::ac_q;
+    let luma_var = luma_ac(&mut ac.data, ts, tile_bo, bsize);
+    let max_delta_q = fi.ac_delta_q[1].max(fi.ac_delta_q[2]);
+    let q = ac_q(fi.base_q_idx, max_delta_q, fi.sequence.bit_depth) as u32;
+    if luma_var * 16 < q * q {
+      return None;
+    }
+  }
+
   let best_alpha: ArrayVec<[i16; 2]> = (1..3)
     .map(|p| {
       let &PlaneConfig { xdec, ydec, .. } = ts.rec.planes[p].plane_cfg;
