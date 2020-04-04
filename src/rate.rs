@@ -568,7 +568,7 @@ fn chroma_offset(
   let y = match chroma_sampling {
     ChromaSampling::Cs400 => unimplemented!(),
     ChromaSampling::Cs420 => (x >> 2) + (x >> 6), // 0.266
-    ChromaSampling::Cs422 => (x >> 3) + (x >> 4) - (x >> 8), // 0.184
+    ChromaSampling::Cs422 => (x >> 3) + (x >> 4) - (x >> 7), // 0.180
     ChromaSampling::Cs444 => (x >> 4) + (x >> 5) + (x >> 8), // 0.098
   };
   // blog64(7) - blog64(4); blog64(5) - blog64(4)
