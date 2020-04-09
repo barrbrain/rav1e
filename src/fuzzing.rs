@@ -181,13 +181,19 @@ pub fn fuzz_encode_decode(data: &[u8]) {
   let speed = 10;
   let q = g.g::<u8>() as usize;
   let limit = (g.g::<u8>() % 3) as usize + 1;
-  let min_keyint = g.g::<u64>() % 4;
-  let max_keyint = g.g::<u64>() % 4 + 1;
+  let bit_depth = 8;
+  let valid_samplings =
+    [ChromaSampling::Cs420, ChromaSampling::Cs422, ChromaSampling::Cs444];
+  let chroma_sampling = valid_samplings[(g.g::<u8>() % 3) as usize];
+  let min_keyint = (g.g::<u8>() % 4) as u64;
+  let max_keyint = (g.g::<u8>() % 4) as u64;
   let switch_frame_interval = 0;
   let low_latency = g.g();
-  let error_resilient = false;
-  let bitrate = g.g();
-  let still_picture = false;
+  let error_resilient = g.g();
+  let bitrate = g.g::<u16>() as i32;
+  let tile_cols_log2 = g.g::<bool>() as usize;
+  let tile_rows_log2 = g.g::<bool>() as usize;
+  let still_picture = g.g();
 
   debug!(
     "w = {:#?}\n\
@@ -195,11 +201,33 @@ pub fn fuzz_encode_decode(data: &[u8]) {
      speed = {:#?}\n\
      q = {:#?}\n\
      limit = {:#?}\n\
+     bit_depth = {:#?}\n\
+     chroma_sampling = {:#?}\n\
      min_keyint = {:#?}\n\
      max_keyint = {:#?}\n\
+     switch_frame_interval = {:#?}\n\
      low_latency = {:#?}\n\
-     bitrate = {:#?}",
-    w, h, speed, q, limit, min_keyint, max_keyint, low_latency, bitrate
+     error_resilient = {:#?}\n\
+     bitrate = {:#?}\n\
+     tile_cols_log2 = {:#?}\n\
+     tile_rows_log2 = {:#?}\n\
+     still_picture = {:#?}",
+    w,
+    h,
+    speed,
+    q,
+    limit,
+    bit_depth,
+    chroma_sampling,
+    min_keyint,
+    max_keyint,
+    switch_frame_interval,
+    low_latency,
+    error_resilient,
+    bitrate,
+    tile_cols_log2,
+    tile_rows_log2,
+    still_picture
   );
 
   let mut dec = get_decoder::<u8>("dav1d", w, h);
@@ -209,16 +237,16 @@ pub fn fuzz_encode_decode(data: &[u8]) {
     speed,
     q,
     limit,
-    8,
-    Default::default(),
+    bit_depth,
+    chroma_sampling,
     min_keyint,
     max_keyint,
     switch_frame_interval,
     low_latency,
     error_resilient,
     bitrate,
-    1,
-    1,
+    tile_cols_log2,
+    tile_rows_log2,
     still_picture,
   );
 }
