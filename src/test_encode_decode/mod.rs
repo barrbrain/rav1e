@@ -852,3 +852,29 @@ fn rdo_loop_decision_cdef_sanity(decoder: &str) {
     false,
   );
 }
+
+#[cfg_attr(feature = "decode_test", interpolate_test(aom, "aom"))]
+#[cfg_attr(feature = "decode_test_dav1d", interpolate_test(dav1d, "dav1d"))]
+fn crash_24073d992400d7a34afd049950310d9b34f9c0bd(decoder: &str) {
+  let w = 16;
+  let h = 271;
+  let mut dec = get_decoder::<u8>(decoder, w as usize, h as usize);
+  dec.encode_decode(
+    w,
+    h,
+    10,
+    255,
+    1,
+    8,
+    ChromaSampling::Cs420,
+    0,
+    0,
+    0,
+    false,
+    false,
+    0,
+    0,
+    0,
+    false,
+  );
+}
