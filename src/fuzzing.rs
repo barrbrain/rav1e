@@ -47,7 +47,7 @@ impl Arbitrary for ArbitraryConfig {
     config.threads = 1;
     config.enc.width = Arbitrary::arbitrary(u)?;
     config.enc.height = Arbitrary::arbitrary(u)?;
-    config.enc.bit_depth = (u8::arbitrary(u)? % 17) as usize;
+    config.enc.bit_depth = 8; // (u8::arbitrary(u)? % 17) as usize;
     config.enc.still_picture = Arbitrary::arbitrary(u)?;
     config.enc.time_base =
       Rational::new(Arbitrary::arbitrary(u)?, Arbitrary::arbitrary(u)?);
@@ -146,6 +146,7 @@ pub struct DecodeTestParameters {
   tile_cols_log2: usize,
   tile_rows_log2: usize,
   still_picture: bool,
+  seed: [u8; 32],
 }
 
 impl Arbitrary for DecodeTestParameters {
@@ -169,6 +170,7 @@ impl Arbitrary for DecodeTestParameters {
       tile_cols_log2: bool::arbitrary(u)? as usize,
       tile_rows_log2: bool::arbitrary(u)? as usize,
       still_picture: bool::arbitrary(u)?,
+      seed: Arbitrary::arbitrary(u)?,
     })
   }
 }
@@ -195,5 +197,6 @@ pub fn fuzz_encode_decode(p: DecodeTestParameters) {
     p.tile_cols_log2,
     p.tile_rows_log2,
     p.still_picture,
+    p.seed,
   );
 }
