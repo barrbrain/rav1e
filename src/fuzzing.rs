@@ -312,6 +312,7 @@ pub struct DecodeTestParameters {
   tile_cols_log2: usize,
   tile_rows_log2: usize,
   still_picture: bool,
+  seed: [u8; 32],
 }
 
 impl Arbitrary for DecodeTestParameters {
@@ -338,6 +339,7 @@ impl Arbitrary for DecodeTestParameters {
       tile_cols_log2: u.int_in_range(0..=2)?,
       tile_rows_log2: u.int_in_range(0..=2)?,
       still_picture: bool::arbitrary(u)?,
+      seed: Arbitrary::arbitrary(u)?,
     };
     if !p.low_latency {
       p.switch_frame_interval = 0;
@@ -371,5 +373,6 @@ pub fn fuzz_encode_decode(p: DecodeTestParameters) {
     p.tile_cols_log2,
     p.tile_rows_log2,
     p.still_picture,
+    p.seed,
   );
 }
