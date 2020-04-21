@@ -22,30 +22,23 @@ use std::collections::VecDeque;
 mod aom;
 #[cfg(feature = "decode_test_dav1d")]
 mod dav1d;
+mod mandelbrotzoom;
 
 #[cfg(feature = "decode_test")]
 use aom::AomDecoder;
 #[cfg(feature = "decode_test_dav1d")]
 use dav1d::Dav1dDecoder;
-
-fn fill_frame<T: Pixel>(ra: &mut ChaChaRng, frame: &mut Frame<T>) {
-  for plane in frame.planes.iter_mut() {
-    let stride = plane.cfg.stride;
-    for row in plane.data.chunks_mut(stride) {
-      for pixel in row {
-        let v: u8 = ra.gen();
-        *pixel = T::cast_from(v);
-      }
-    }
-  }
-}
+use mandelbrotzoom::*;
 
 fn read_frame_batch<T: Pixel>(
   ctx: &mut Context<T>, ra: &mut ChaChaRng, limit: usize,
 ) {
-  for _ in 0..limit {
+  let v = Vector::new(16374, 257, 14);
+  let rz = RotateZoom::new(ctx.config.width, ctx.config.height);
+  let start = ra.gen::<u16>() as usize;
+  for frameno in 0..limit {
     let mut input = ctx.new_frame();
-    fill_frame(ra, &mut input);
+    fill_frame(&mut input, rz * v.pow(start + frameno), ctx.config.bit_depth);
 
     let _ = ctx.send_frame(input);
   }
