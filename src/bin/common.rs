@@ -51,7 +51,7 @@ pub struct CliOptions {
 
 #[cfg(feature = "serialize")]
 fn build_speed_long_help() -> String {
-  let levels = (0..=10)
+  let levels = (0..=11)
     .map(|speed| {
       let s = SpeedSettings::from_preset(speed);
       let o = crate::kv::to_string(&s).unwrap().replace(", ", "\n    ");
@@ -532,8 +532,8 @@ fn parse_config(matches: &ArgMatches<'_>) -> Result<EncoderConfig, CliError> {
     min_interval = min_interval.min(max_interval);
   }
 
-  if speed > 10 {
-    panic!("Speed must be between 0-10");
+  if speed > 11 {
+    panic!("Speed must be between 0-11");
   } else if min_interval > max_interval {
     panic!("Maximum keyframe interval must be greater than or equal to minimum keyframe interval");
   }

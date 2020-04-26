@@ -845,7 +845,12 @@ pub fn rdo_mode_decision<T: Pixel>(
     );
   }
 
-  if best.pred_mode_luma.is_intra() && is_chroma_block && bsize.cfl_allowed() {
+  if fi.config.speed_settings.prediction_modes
+    >= PredictionModesSetting::Simple
+    && best.pred_mode_luma.is_intra()
+    && is_chroma_block
+    && bsize.cfl_allowed()
+  {
     cw.bc.blocks.set_segmentation_idx(tile_bo, bsize, best.sidx);
 
     let chroma_mode = PredictionMode::UV_CFL_PRED;
@@ -1033,11 +1038,14 @@ fn inter_frame_rdo_mode_decision<T: Pixel>(
     for &x in RAV1E_INTER_MODES_MINIMAL {
       inter_mode_set.push((x, i));
     }
-    if !mv_stack.is_empty() {
-      inter_mode_set.push((PredictionMode::NEAR0MV, i));
-    }
-    if mv_stack.len() >= 2 {
-      inter_mode_set.push((PredictionMode::GLOBALMV, i));
+    if fi.config.speed_settings.prediction_modes
+      >= PredictionModesSetting::Simple {
+      if !mv_stack.is_empty() {
+        inter_mode_set.push((PredictionMode::NEAR0MV, i));
+      }
+      if mv_stack.len() >= 2 {
+        inter_mode_set.push((PredictionMode::GLOBALMV, i));
+      }
     }
     let include_near_mvs = fi.config.speed_settings.include_near_mvs;
     if include_near_mvs {
@@ -1066,7 +1074,9 @@ fn inter_frame_rdo_mode_decision<T: Pixel>(
 
   let sz = bsize.width_mi().min(bsize.height_mi());
 
-  if fi.reference_mode != ReferenceMode::SINGLE && sz >= 2 {
+  if fi.reference_mode != ReferenceMode::SINGLE && sz >= 2 &&
+    fi.config.speed_settings.prediction_modes
+      >= PredictionModesSetting::Simple {
     // Adding compound candidate
     if let Some(r0) = fwdref {
       if let Some(r1) = bwdref {
@@ -1173,8 +1183,12 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
         >= PredictionModesSetting::ComplexAll)
   {
     7
-  } else {
+  } else if fi.config.speed_settings.prediction_modes
+    >= PredictionModesSetting::Simple
+  {
     3
+  } else {
+    1
   };
 
   let intra_mode_set = RAV1E_INTRA_MODES;
@@ -1201,7 +1215,7 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
 
   // If tx partition (i.e. fi.tx_mode_select) is enabled, the below intra prediction screening
   // may be improved by emulating prediction for each tx block.
-  {
+  if num_modes_rdo > 1 {
     let satds = {
       // FIXME: If tx partition is used, this whole sads block should be fixed
       let tx_size = bsize.tx_size();

@@ -372,6 +372,7 @@ impl SpeedSettings {
   /// Set the speed setting according to a numeric speed preset.
   ///
   /// The speed settings vary depending on speed value from 0 to 10.
+  /// - 11 (do-not-use): min prediction modes, min block size 64x64, reduced TX set, fast deblock, fast scenechange detection.
   /// - 10 (fastest): min block size 64x64, reduced TX set, fast deblock, fast scenechange detection.
   /// - 9: min block size 32x32, reduced TX set, fast deblock.
   /// - 8: min block size 8x8, reduced TX set, fast deblock.
@@ -462,8 +463,10 @@ impl SpeedSettings {
       PredictionModesSetting::ComplexAll
     } else if speed <= 6 {
       PredictionModesSetting::ComplexKeyframes
-    } else {
+    } else if speed <= 10 {
       PredictionModesSetting::Simple
+    } else {
+      PredictionModesSetting::Essential
     }
   }
 
@@ -476,7 +479,7 @@ impl SpeedSettings {
   }
 
   const fn fast_scene_detection_preset(speed: usize) -> bool {
-    speed == 10
+    speed <= 11
   }
 
   /// Currently Diamond ME gives better quality than full search on most videos,
@@ -487,8 +490,8 @@ impl SpeedSettings {
     true
   }
 
-  const fn cdef_preset(_speed: usize) -> bool {
-    true
+  const fn cdef_preset(speed: usize) -> bool {
+    speed <= 10
   }
 
   const fn lrf_preset(speed: usize) -> bool {
@@ -561,6 +564,8 @@ impl PartitionRange {
   Deserialize,
 )]
 pub enum PredictionModesSetting {
+  /// Only one prediction mode.
+  Essential,
   /// Only simple prediction modes.
   Simple,
   /// Search all prediction modes on key frames and simple modes on other
@@ -576,6 +581,7 @@ impl fmt::Display for PredictionModesSetting {
       f,
       "{}",
       match self {
+        PredictionModesSetting::Essential => "Essential",
         PredictionModesSetting::Simple => "Simple",
         PredictionModesSetting::ComplexKeyframes => "Complex-KFs",
         PredictionModesSetting::ComplexAll => "Complex-All",
