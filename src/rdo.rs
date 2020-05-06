@@ -612,9 +612,11 @@ pub fn rdo_tx_size_type<T: Pixel>(
   let mut best_tx_size = tx_size;
   let mut best_rd = std::f64::MAX;
 
-  let do_rdo_tx_size =
-    fi.tx_mode_select && fi.config.speed_settings.rdo_tx_decision && !is_inter;
-  let rdo_tx_depth = if do_rdo_tx_size { 2 } else { 0 };
+  let do_rdo_tx_size = fi.tx_mode_select
+    && fi.config.speed_settings.rdo_tx_decision
+    && !is_inter
+    && tx_size.sqr() <= TxSize::TX_8X8;
+  let rdo_tx_depth = if do_rdo_tx_size { 1 } else { 0 };
   let mut cw_checkpoint = None;
 
   for _ in 0..=rdo_tx_depth {
