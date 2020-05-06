@@ -615,7 +615,7 @@ pub fn rdo_tx_size_type<T: Pixel>(
   let do_rdo_tx_size = fi.tx_mode_select
     && fi.config.speed_settings.rdo_tx_decision
     && !is_inter
-    && tx_size.sqr() <= TxSize::TX_8X8;
+    && tx_size.sqr() <= TxSize::TX_16X16;
   let rdo_tx_depth = if do_rdo_tx_size { 1 } else { 0 };
   let mut cw_checkpoint = None;
 
