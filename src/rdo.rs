@@ -619,7 +619,17 @@ pub fn rdo_tx_size_type<T: Pixel>(
   let rdo_tx_depth = if do_rdo_tx_size { 1 } else { 0 };
   let mut cw_checkpoint = None;
 
-  for _ in 0..=rdo_tx_depth {
+  for i in 0..=rdo_tx_depth {
+    let next_tx_size = sub_tx_size_map[tx_size as usize];
+    // Only use the deepest split below 16x16
+    if i < rdo_tx_depth
+      && next_tx_size != tx_size
+      && tx_size.sqr() < TxSize::TX_16X16
+    {
+      tx_size = next_tx_size;
+      continue;
+    };
+
     let tx_set = get_tx_set(tx_size, is_inter, fi.use_reduced_tx_set);
 
     let do_rdo_tx_type = tx_set > TxSet::TX_SET_DCTONLY
@@ -657,7 +667,6 @@ pub fn rdo_tx_size_type<T: Pixel>(
       tx_size.sqr() <= TxSize::TX_32X32 || tx_type == TxType::DCT_DCT
     );
 
-    let next_tx_size = sub_tx_size_map[tx_size as usize];
     cw.rollback(cw_checkpoint.as_ref().unwrap());
 
     if next_tx_size == tx_size {
