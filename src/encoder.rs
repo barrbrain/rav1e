@@ -3434,8 +3434,18 @@ fn check_lf_queue<T: Pixel>(
             if qe.lru_index[pli] != -1
               && last_lru_coded[pli] < qe.lru_index[pli]
             {
+              let bx = (ts.sbo.0.x+qe.sbo.0.x)<<4;
+              let by = (ts.sbo.0.y+qe.sbo.0.y)<<4;
+              let sr_sb128w = (fi.sb_width+1) >> 1;
+              let sb_idx = (by >> 5) * sr_sb128w + (bx >> 5);
+              let unit_idx = ((by & 16) >> 3) + ((bx & 16) >> 4);
+              let log = ts.sbo.0.x == 0 && ts.sbo.0.y == 0;
+              if log {
+              println!("read_restoration_info sb_idx:{:?} p:{} unit_idx:{}",
+                  sb_idx, pli, unit_idx);
+              }
               last_lru_coded[pli] = qe.lru_index[pli];
-              cw.write_lrf(w, fi, &mut ts.restoration, qe.sbo, pli);
+              cw.write_lrf(w, fi, &mut ts.restoration, qe.sbo, pli, log);
             }
           }
         }

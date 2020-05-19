@@ -3787,12 +3787,16 @@ impl<'a> ContextWriter<'a> {
   pub fn write_lrf<T: Pixel>(
     &mut self, w: &mut dyn Writer, fi: &FrameInvariants<T>,
     rs: &mut TileRestorationStateMut, sbo: TileSuperBlockOffset, pli: usize,
+    log: bool,
   ) {
     if !fi.allow_intrabc {
       // TODO: also disallow if lossless
       let rp = &mut rs.planes[pli];
       if let Some(filter) = rp.restoration_unit(sbo, true).map(|ru| ru.filter)
       {
+        if log {
+          println!("write_lrf[pl={},{:?}]", pli, filter);
+        }
         match filter {
           RestorationFilter::None => match rp.rp_cfg.lrf_type {
             RESTORE_WIENER => {
@@ -3846,6 +3850,10 @@ impl<'a> ContextWriter<'a> {
                   rp.sgrproj_ref[1] = 95; // LOL at spec.  The result is always 95.
                 }
               }
+            }
+            if log {
+            println!("Post-lr_sgrproj[pl={},w[{},{}]]",
+            pli, rp.sgrproj_ref[0], rp.sgrproj_ref[1]);
             }
           }
           RestorationFilter::Wiener { coeffs } => {
