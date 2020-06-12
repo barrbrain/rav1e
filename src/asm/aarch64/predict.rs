@@ -73,7 +73,7 @@ macro_rules! decl_angular_ipred_hbd_fn {
         fn $f(
           dst: *mut u16, stride: libc::ptrdiff_t, topleft: *const u16,
           width: libc::c_int, height: libc::c_int, angle: libc::c_int,
-          bitdepth_max: libc::c_int,
+          max_width: libc:c_int, max_height: libc:c_int, bitdepth_max: libc::c_int,
         );
       )*
     }
@@ -204,36 +204,36 @@ pub fn dispatch_predict_intra<T: Pixel>(
             PredictionVariant::LEFT => rav1e_ipred_dc_left_16bpc_neon,
             PredictionVariant::TOP => rav1e_ipred_dc_top_16bpc_neon,
             PredictionVariant::BOTH => rav1e_ipred_dc_16bpc_neon,
-          })(dst_ptr, stride, edge_ptr, w, h, angle, max_val);
+          })(dst_ptr, stride, edge_ptr, w, h, angle, 0, 0, max_val);
         }
         PredictionMode::V_PRED if angle == 90 => {
           rav1e_ipred_v_16bpc_neon(
-            dst_ptr, stride, edge_ptr, w, h, angle, max_val,
+            dst_ptr, stride, edge_ptr, w, h, angle, 0, 0, max_val,
           );
         }
         PredictionMode::H_PRED if angle == 180 => {
           rav1e_ipred_h_16bpc_neon(
-            dst_ptr, stride, edge_ptr, w, h, angle, max_val,
+            dst_ptr, stride, edge_ptr, w, h, angle, 0, 0, max_val,
           );
         }
         PredictionMode::SMOOTH_PRED => {
           rav1e_ipred_smooth_16bpc_neon(
-            dst_ptr, stride, edge_ptr, w, h, angle, max_val,
+            dst_ptr, stride, edge_ptr, w, h, angle, 0, 0, max_val,
           );
         }
         PredictionMode::SMOOTH_V_PRED => {
           rav1e_ipred_smooth_v_16bpc_neon(
-            dst_ptr, stride, edge_ptr, w, h, angle, max_val,
+            dst_ptr, stride, edge_ptr, w, h, angle, 0, 0, max_val,
           );
         }
         PredictionMode::SMOOTH_H_PRED => {
           rav1e_ipred_smooth_h_16bpc_neon(
-            dst_ptr, stride, edge_ptr, w, h, angle, max_val,
+            dst_ptr, stride, edge_ptr, w, h, angle, 0, 0, max_val,
           );
         }
         PredictionMode::PAETH_PRED => {
           rav1e_ipred_paeth_16bpc_neon(
-            dst_ptr, stride, edge_ptr, w, h, angle, max_val,
+            dst_ptr, stride, edge_ptr, w, h, angle, 0, 0, max_val,
           );
         }
         PredictionMode::UV_CFL_PRED => {
