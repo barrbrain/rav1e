@@ -132,6 +132,14 @@ pub fn dispatch_predict_intra<T: Pixel>(
     return call_rust(dst);
   }
 
+  #[cfg(feature = "check_asm")]
+  let ref_dst = {
+    use crate::frame::AsRegion;
+    let mut copy = dst.scratch_copy();
+    call_rust(&mut copy.as_region_mut());
+    copy
+  };
+
   unsafe {
     let stride = dst.plane_cfg.stride as libc::ptrdiff_t;
     let w = tx_size.width() as libc::c_int;
@@ -238,6 +246,17 @@ pub fn dispatch_predict_intra<T: Pixel>(
           })(dst_ptr, stride, edge_ptr, w, h, ac_ptr, angle, max_val);
         }
         _ => call_rust(dst),
+      }
+    }
+  }
+  #[cfg(feature = "check_asm")]
+  {
+    use crate::frame::AsRegion;
+    for (dst_row, ref_row) in
+      dst.rows_iter().zip(ref_dst.as_region().rows_iter())
+    {
+      for (dst, reference) in dst_row.iter().zip(ref_row) {
+        assert_eq!(*dst, *reference, "mode: {:?}", mode);
       }
     }
   }
