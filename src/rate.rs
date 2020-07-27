@@ -68,6 +68,28 @@ const MQP_Q12: &[i32; FRAME_NSUBTYPES] = &[
   (1.0 * (1 << 12) as f64) as i32,
 ];
 
+// To-do: Add documentaiton after debugging
+// DQP_Q57[i] = log_2(sqrt(w_1/w_i))*(1 << 57)
+// 0                      1.500118 [Negetive]
+// 1                      1.308718 [Zero]
+// 2                      1.121855 [Positve]
+// 3                      1.039993 [Postive]
+
+pub fn calc_dqp_q57(temp_dqp57: usize) -> i64 {
+  const MEAN_DW: &[f64; FRAME_NSUBTYPES] = &[
+    (1.500118 as f64),
+    (1.308718 as f64),
+    (1.121855 as f64),
+    (1.039993 as f64),
+  ];
+  // To-do: Return directly after debugging
+  let dummy = ((MEAN_DW[1] / MEAN_DW[temp_dqp57]).sqrt().log2()
+    * (1i64 << 57) as f64) as i64;
+  eprintln!("{:?}", dummy);
+  dummy
+}
+
+/*
 // The ratio 33_810_170.0 / 86_043_287.0 was derived by approximating the median
 // of a change of 15 quantizer steps in the quantizer tables.
 const DQP_Q57: &[i64; FRAME_NSUBTYPES] = &[
@@ -76,6 +98,7 @@ const DQP_Q57: &[i64; FRAME_NSUBTYPES] = &[
   ((33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
   (2.0 * (33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
 ];
+*/
 
 // Convert an integer into a Q57 fixed-point fraction.
 // The integer must be in the range -64 to 63, inclusive.
@@ -889,7 +912,7 @@ impl RCState {
     // Adjust the quantizer for the frame type, result is Q57:
     let log_q = ((self.pass1_log_base_q + (1i64 << 11)) >> 12)
       * (MQP_Q12[fti] as i64)
-      + DQP_Q57[fti];
+      + calc_dqp_q57(fti);
     QuantizerParameters::new_from_log_q(
       self.pass1_log_base_q,
       log_q,
@@ -926,7 +949,7 @@ impl RCState {
       let log_base_q = (log_ac_q + log_dc_q + 1) >> 1;
       // Adjust the quantizer for the frame type, result is Q57:
       let log_q = ((log_base_q + (1i64 << 11)) >> 12) * (MQP_Q12[fti] as i64)
-        + DQP_Q57[fti];
+        + calc_dqp_q57(fti);
       QuantizerParameters::new_from_log_q(
         log_base_q,
         log_q,
@@ -1119,7 +1142,7 @@ impl RCState {
           // Modulate base quantizer by frame type.
           let log_q = ((log_base_q + (1i64 << 11)) >> 12)
             * (MQP_Q12[ftj] as i64)
-            + DQP_Q57[ftj];
+            + calc_dqp_q57(ftj);
           // All the fields here are Q57 except for the exponent, which is
           //  Q6.
           bits += (nframes[ftj] as i64)
@@ -1153,7 +1176,7 @@ impl RCState {
       // Modulate base quantizer by frame type.
       let mut log_q = ((log_base_q + (1i64 << 11)) >> 12)
         * (MQP_Q12[fti] as i64)
-        + DQP_Q57[fti];
+        + calc_dqp_q57(fti);
       // The above allocation looks only at the total rate we'll accumulate
       //  in the next reservoir_frame_delay frames.
       // However, we could overflow the bit reservoir on the very next
