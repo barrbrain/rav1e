@@ -69,7 +69,7 @@ impl<'a> ContextWriter<'a> {
     bo: TileBlockOffset,
   ) {
     let rf = self.bc.blocks[bo].ref_frames;
-    let sz = self.bc.blocks[bo].n4_w.min(self.bc.blocks[bo].n4_h);
+    let sz = self.bc.blocks[bo].n4_w().min(self.bc.blocks[bo].n4_h());
 
     /* TODO: Handle multiple references */
     let comp_mode = self.bc.blocks[bo].has_second_ref();

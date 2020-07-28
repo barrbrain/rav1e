@@ -567,8 +567,8 @@ impl<'a> ContextWriter<'a> {
     &self, bo: TileBlockOffset, bsize: BlockSize,
   ) -> usize {
     let max_tx_size = max_txsize_rect_lookup[bsize as usize];
-    let max_tx_wide = max_tx_size.width() as u8;
-    let max_tx_high = max_tx_size.height() as u8;
+    let max_tx_wide = max_tx_size.width();
+    let max_tx_high = max_tx_size.height();
     let has_above = bo.0.y > 0;
     let has_left = bo.0.x > 0;
     let mut above = self.bc.above_tx_context[bo.0.x] >= max_tx_wide as u8;
@@ -577,13 +577,13 @@ impl<'a> ContextWriter<'a> {
     if has_above {
       let above_blk = self.bc.blocks.above_of(bo);
       if above_blk.is_inter() {
-        above = (above_blk.n4_w << MI_SIZE_LOG2) >= max_tx_wide;
+        above = (above_blk.n4_w() << MI_SIZE_LOG2) >= max_tx_wide;
       };
     }
     if has_left {
       let left_blk = self.bc.blocks.left_of(bo);
       if left_blk.is_inter() {
-        left = (left_blk.n4_h << MI_SIZE_LOG2) >= max_tx_high;
+        left = (left_blk.n4_h() << MI_SIZE_LOG2) >= max_tx_high;
       };
     }
     if has_above && has_left {

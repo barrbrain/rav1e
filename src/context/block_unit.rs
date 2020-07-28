@@ -170,8 +170,6 @@ pub struct Block {
   pub neighbors_ref_counts: [u8; INTER_REFS_PER_FRAME],
   pub cdef_index: u8,
   pub bsize: BlockSize,
-  pub n4_w: u8, /* block width in the unit of mode_info */
-  pub n4_h: u8, /* block height in the unit of mode_info */
   pub txsize: TxSize,
   // The block-level deblock_deltas are left-shifted by
   // fi.deblock.block_delta_shift and added to the frame-configured
@@ -187,6 +185,16 @@ impl Block {
   pub fn has_second_ref(&self) -> bool {
     self.ref_frames[1] != INTRA_FRAME && self.ref_frames[1] != NONE_FRAME
   }
+  /// block width in the unit of mode_info
+  #[inline(always)]
+  pub fn n4_w(&self) -> usize {
+    self.bsize.width_mi()
+  }
+  /// block height in the unit of mode_info
+  #[inline(always)]
+  pub fn n4_h(&self) -> usize {
+    self.bsize.height_mi()
+  }
 }
 
 impl Default for Block {
@@ -200,8 +208,6 @@ impl Default for Block {
       neighbors_ref_counts: [0; INTER_REFS_PER_FRAME],
       cdef_index: 0,
       bsize: BLOCK_64X64,
-      n4_w: BLOCK_64X64.width_mi() as u8,
-      n4_h: BLOCK_64X64.height_mi() as u8,
       txsize: TX_64X64,
       deblock_deltas: [0, 0, 0, 0],
       segmentation_idx: 0,
@@ -956,7 +962,7 @@ impl<'a> ContextWriter<'a> {
       let cand =
         &bc.blocks[bo.with_offset(col_offset + i as isize, row_offset)];
 
-      let n4_w = cand.n4_w as usize;
+      let n4_w = cand.n4_w();
       let mut len = cmp::min(target_n4_w, n4_w);
       if use_step_16 {
         len = cmp::max(n4_w_16, len);
@@ -966,7 +972,7 @@ impl<'a> ContextWriter<'a> {
 
       let mut weight = 2 as u32;
       if target_n4_w >= n4_w_8 && target_n4_w <= n4_w {
-        let inc = cmp::min(-max_row_offs + row_offset + 1, cand.n4_h as isize);
+        let inc = cmp::min(-max_row_offs + row_offset + 1, cand.n4_h() as isize);
         assert!(inc >= 0);
         weight = cmp::max(weight, inc as u32);
         *processed_rows = (inc as isize) - row_offset - 1;
@@ -1022,7 +1028,7 @@ impl<'a> ContextWriter<'a> {
     while i < end_mi {
       let cand =
         &bc.blocks[bo.with_offset(col_offset, row_offset + i as isize)];
-      let n4_h = cand.n4_h as usize;
+      let n4_h = cand.n4_h();
       let mut len = cmp::min(target_n4_h, n4_h);
       if use_step_16 {
         len = cmp::max(n4_h_16, len);
@@ -1032,7 +1038,7 @@ impl<'a> ContextWriter<'a> {
 
       let mut weight = 2 as u32;
       if target_n4_h >= n4_h_8 && target_n4_h <= n4_h {
-        let inc = cmp::min(-max_col_offs + col_offset + 1, cand.n4_w as isize);
+        let inc = cmp::min(-max_col_offs + col_offset + 1, cand.n4_w() as isize);
         assert!(inc >= 0);
         weight = cmp::max(weight, inc as u32);
         *processed_cols = (inc as isize) - col_offset - 1;
@@ -1286,7 +1292,7 @@ impl<'a> ContextWriter<'a> {
             &mut ref_diff_mvs,
           );
 
-          idx += if pass == 0 { blk.n4_w } else { blk.n4_h } as usize;
+          idx += if pass == 0 { blk.n4_w() } else { blk.n4_h() } as usize;
         }
       }
 
