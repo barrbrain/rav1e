@@ -1055,6 +1055,7 @@ impl<T: Pixel> ContextInner<T> {
       let block_importances = fi.block_importances.iter();
       let lookahead_intra_costs = fi.lookahead_intra_costs.iter();
       let distortion_scales = fi.distortion_scales.iter_mut();
+      let mut dist_scale_sum = 0.;
       for ((&propagate_cost, &intra_cost), distortion_scale) in
         block_importances.zip(lookahead_intra_costs).zip(distortion_scales)
       {
@@ -1062,6 +1063,12 @@ impl<T: Pixel> ContextInner<T> {
           propagate_cost as f64,
           intra_cost as f64,
         );
+        dist_scale_sum += f64::from(*distortion_scale);
+      }
+      let dist_scale_inv_mean = fi.distortion_scales.len() as f64 / dist_scale_sum;
+      eprintln!("Inverse mean distortion scale: {:?}\tFrame: {}", dist_scale_inv_mean, fi.input_frameno);
+      for distortion_scale in fi.distortion_scales.iter_mut() {
+          *distortion_scale = distortion_scale.mul_f64(dist_scale_inv_mean);
       }
       #[cfg(feature = "dump_lookahead_data")]
       {

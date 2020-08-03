@@ -534,6 +534,14 @@ impl DistortionScale {
   fn mul_u64(self, dist: u64) -> u64 {
     (self.0 as u64 * dist + (1 << Self::SHIFT >> 1)) >> Self::SHIFT
   }
+
+  #[inline]
+  pub fn mul_f64(self, scale: f64) -> DistortionScale {
+    Self(
+      (self.0 as f64 * scale + 0.5)
+        .min(((1 << Self::BITS as u64) - 1) as f64) as u32,
+    )
+  }
 }
 
 // Default value for DistortionScale is a fixed point 1

@@ -85,7 +85,6 @@ pub fn calc_dqp_q57(temp_dqp57: usize) -> i64 {
   // To-do: Return directly after debugging
   let dummy = ((MEAN_DW[1] / MEAN_DW[temp_dqp57]).sqrt().log2()
     * (1i64 << 57) as f64) as i64;
-  eprintln!("{:?}", dummy);
   dummy
 }
 
