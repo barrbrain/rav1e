@@ -198,7 +198,7 @@ impl SpeedSettings {
 
   /// TX domain distortion is always faster, with no significant quality change
   const fn tx_domain_distortion_preset(_speed: usize) -> bool {
-    true
+    false
   }
 
   const fn tx_domain_rate_preset(_speed: usize) -> bool {
