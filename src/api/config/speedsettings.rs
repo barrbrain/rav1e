@@ -192,8 +192,8 @@ impl SpeedSettings {
     speed >= 8
   }
 
-  const fn reduced_tx_set_preset(speed: usize) -> bool {
-    speed >= 6
+  const fn reduced_tx_set_preset(_speed: usize) -> bool {
+    false
   }
 
   /// TX domain distortion is always faster, with no significant quality change
@@ -267,8 +267,8 @@ impl SpeedSettings {
   }
 
   // FIXME: With unknown reasons, inter_tx_split does not work if reduced_tx_set is false
-  const fn enable_inter_tx_split_preset(speed: usize) -> bool {
-    speed >= 9
+  const fn enable_inter_tx_split_preset(_speed: usize) -> bool {
+    true
   }
 
   fn fine_directional_intra_preset(speed: usize) -> bool {
