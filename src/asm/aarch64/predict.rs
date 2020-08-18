@@ -25,7 +25,6 @@ macro_rules! decl_angular_ipred_fn {
         fn $f(
           dst: *mut u8, stride: libc::ptrdiff_t, topleft: *const u8,
           width: libc::c_int, height: libc::c_int, angle: libc::c_int,
-          max_width: libc::c_int, max_height: libc::c_int,
         );
       )*
     }
@@ -52,7 +51,8 @@ macro_rules! decl_angular_ipred_hbd_fn {
         fn $f(
           dst: *mut u16, stride: libc::ptrdiff_t, topleft: *const u16,
           width: libc::c_int, height: libc::c_int, angle: libc::c_int,
-          max_width: libc::c_int, max_height: libc::c_int, bit_depth_max: libc::c_int,
+          max_width: libc::c_int, max_height: libc::c_int,
+          bit_depth_max: libc::c_int,
         );
       )*
     }
@@ -128,10 +128,14 @@ pub fn dispatch_predict_intra<T: Pixel>(
     );
   };
 
+  if cpu < CpuFeatureLevel::NEON {
+    return call_rust(dst);
+  }
+
   unsafe {
     let dst_ptr = dst.data_ptr_mut() as *mut _;
     let dst_hbd_ptr = dst.data_ptr_mut() as *mut u16;
-    let stride = dst.plane_cfg.stride as libc::ptrdiff_t;
+    let stride = T::to_asm_stride(dst.plane_cfg.stride) as libc::ptrdiff_t;
     let edge_ptr =
       edge_buf.data.as_ptr().offset(2 * MAX_TX_SIZE as isize) as *const _;
     let edge_hbd_ptr =
@@ -139,176 +143,166 @@ pub fn dispatch_predict_intra<T: Pixel>(
     let w = tx_size.width() as libc::c_int;
     let h = tx_size.height() as libc::c_int;
     let angle = angle as libc::c_int;
-    if cpu == CpuFeatureLevel::NEON {
-      match T::type_enum() {
-        PixelType::U8 => match mode {
-          PredictionMode::DC_PRED => {
-            (match variant {
-              PredictionVariant::NONE => rav1e_ipred_dc_128_8bpc_neon,
-              PredictionVariant::LEFT => rav1e_ipred_dc_left_8bpc_neon,
-              PredictionVariant::TOP => rav1e_ipred_dc_top_8bpc_neon,
-              PredictionVariant::BOTH => rav1e_ipred_dc_8bpc_neon,
-            })(dst_ptr, stride, edge_ptr, w, h, 0, 0, angle);
-          }
-          PredictionMode::V_PRED if angle == 90 => {
-            rav1e_ipred_v_8bpc_neon(
-              dst_ptr, stride, edge_ptr, w, h, 0, 0, angle,
-            );
-          }
-          PredictionMode::H_PRED if angle == 180 => {
-            rav1e_ipred_h_8bpc_neon(
-              dst_ptr, stride, edge_ptr, w, h, 0, 0, angle,
-            );
-          }
-          PredictionMode::SMOOTH_PRED => {
-            rav1e_ipred_smooth_8bpc_neon(
-              dst_ptr, stride, edge_ptr, w, h, angle, 0, 0,
-            );
-          }
-          PredictionMode::SMOOTH_V_PRED => {
-            rav1e_ipred_smooth_v_8bpc_neon(
-              dst_ptr, stride, edge_ptr, w, h, angle, 0, 0,
-            );
-          }
-          PredictionMode::SMOOTH_H_PRED => {
-            rav1e_ipred_smooth_h_8bpc_neon(
-              dst_ptr, stride, edge_ptr, w, h, angle, 0, 0,
-            );
-          }
-          PredictionMode::PAETH_PRED => {
-            rav1e_ipred_paeth_8bpc_neon(
-              dst_ptr, stride, edge_ptr, w, h, angle, 0, 0,
-            );
-          }
-          PredictionMode::UV_CFL_PRED => {
-            let ac_ptr = ac.as_ptr() as *const _;
-            (match variant {
-              PredictionVariant::NONE => rav1e_ipred_cfl_128_8bpc_neon,
-              PredictionVariant::LEFT => rav1e_ipred_cfl_left_8bpc_neon,
-              PredictionVariant::TOP => rav1e_ipred_cfl_top_8bpc_neon,
-              PredictionVariant::BOTH => rav1e_ipred_cfl_8bpc_neon,
-            })(dst_ptr, stride, edge_ptr, w, h, ac_ptr, angle);
-          }
-          _ => call_rust(dst),
-        },
-        PixelType::U16 => match mode {
-          PredictionMode::DC_PRED => {
-            (match variant {
-              PredictionVariant::NONE => rav1e_ipred_dc_128_16bpc_neon,
-              PredictionVariant::LEFT => rav1e_ipred_dc_left_16bpc_neon,
-              PredictionVariant::TOP => rav1e_ipred_dc_top_16bpc_neon,
-              PredictionVariant::BOTH => rav1e_ipred_dc_16bpc_neon,
-            })(
-              dst_hbd_ptr,
-              T::to_asm_stride(stride as usize),
-              edge_hbd_ptr,
-              w,
-              h,
-              angle,
-              0,
-              0,
-              (1 << bit_depth) - 1,
-            );
-          }
-          PredictionMode::V_PRED if angle == 90 => {
-            rav1e_ipred_v_16bpc_neon(
-              dst_hbd_ptr,
-              T::to_asm_stride(stride as usize),
-              edge_hbd_ptr,
-              w,
-              h,
-              angle,
-              0,
-              0,
-              (1 << bit_depth) - 1,
-            );
-          }
-          PredictionMode::H_PRED if angle == 180 => {
-            rav1e_ipred_h_16bpc_neon(
-              dst_hbd_ptr,
-              T::to_asm_stride(stride as usize),
-              edge_hbd_ptr,
-              w,
-              h,
-              angle,
-              0,
-              0,
-              (1 << bit_depth) - 1,
-            );
-          }
-          PredictionMode::SMOOTH_PRED => {
-            rav1e_ipred_smooth_16bpc_neon(
-              dst_hbd_ptr,
-              T::to_asm_stride(stride as usize),
-              edge_hbd_ptr,
-              w,
-              h,
-              angle,
-              0,
-              0,
-              (1 << bit_depth) - 1,
-            );
-          }
-          PredictionMode::SMOOTH_V_PRED => {
-            rav1e_ipred_smooth_v_16bpc_neon(
-              dst_hbd_ptr,
-              T::to_asm_stride(stride as usize),
-              edge_hbd_ptr,
-              w,
-              h,
-              angle,
-              0,
-              0,
-              (1 << bit_depth) - 1,
-            );
-          }
-          PredictionMode::SMOOTH_H_PRED => {
-            rav1e_ipred_smooth_h_16bpc_neon(
-              dst_hbd_ptr,
-              T::to_asm_stride(stride as usize),
-              edge_hbd_ptr,
-              w,
-              h,
-              angle,
-              0,
-              0,
-              (1 << bit_depth) - 1,
-            );
-          }
-          PredictionMode::PAETH_PRED => {
-            rav1e_ipred_paeth_16bpc_neon(
-              dst_hbd_ptr,
-              T::to_asm_stride(stride as usize),
-              edge_hbd_ptr,
-              w,
-              h,
-              angle,
-              0,
-              0,
-              (1 << bit_depth) - 1,
-            );
-          }
-          PredictionMode::UV_CFL_PRED => {
-            let ac_ptr = ac.as_ptr() as *const _;
-            (match variant {
-              PredictionVariant::NONE => rav1e_ipred_cfl_128_16bpc_neon,
-              PredictionVariant::LEFT => rav1e_ipred_cfl_left_16bpc_neon,
-              PredictionVariant::TOP => rav1e_ipred_cfl_top_16bpc_neon,
-              PredictionVariant::BOTH => rav1e_ipred_cfl_16bpc_neon,
-            })(
-              dst_hbd_ptr,
-              T::to_asm_stride(stride as usize),
-              edge_hbd_ptr,
-              w,
-              h,
-              ac_ptr,
-              angle,
-              (1 << bit_depth) - 1,
-            );
-          }
-          _ => call_rust(dst),
-        },
-      }
+    match T::type_enum() {
+      PixelType::U8 => match mode {
+        PredictionMode::DC_PRED => {
+          (match variant {
+            PredictionVariant::NONE => rav1e_ipred_dc_128_8bpc_neon,
+            PredictionVariant::LEFT => rav1e_ipred_dc_left_8bpc_neon,
+            PredictionVariant::TOP => rav1e_ipred_dc_top_8bpc_neon,
+            PredictionVariant::BOTH => rav1e_ipred_dc_8bpc_neon,
+          })(dst_ptr, stride, edge_ptr, w, h, angle);
+        }
+        PredictionMode::V_PRED if angle == 90 => {
+          rav1e_ipred_v_8bpc_neon(dst_ptr, stride, edge_ptr, w, h, angle);
+        }
+        PredictionMode::H_PRED if angle == 180 => {
+          rav1e_ipred_h_8bpc_neon(dst_ptr, stride, edge_ptr, w, h, angle);
+        }
+        PredictionMode::SMOOTH_PRED => {
+          rav1e_ipred_smooth_8bpc_neon(dst_ptr, stride, edge_ptr, w, h, angle);
+        }
+        PredictionMode::SMOOTH_V_PRED => {
+          rav1e_ipred_smooth_v_8bpc_neon(
+            dst_ptr, stride, edge_ptr, w, h, angle,
+          );
+        }
+        PredictionMode::SMOOTH_H_PRED => {
+          rav1e_ipred_smooth_h_8bpc_neon(
+            dst_ptr, stride, edge_ptr, w, h, angle,
+          );
+        }
+        PredictionMode::PAETH_PRED => {
+          rav1e_ipred_paeth_8bpc_neon(dst_ptr, stride, edge_ptr, w, h, angle);
+        }
+        PredictionMode::UV_CFL_PRED => {
+          let ac_ptr = ac.as_ptr() as *const _;
+          (match variant {
+            PredictionVariant::NONE => rav1e_ipred_cfl_128_8bpc_neon,
+            PredictionVariant::LEFT => rav1e_ipred_cfl_left_8bpc_neon,
+            PredictionVariant::TOP => rav1e_ipred_cfl_top_8bpc_neon,
+            PredictionVariant::BOTH => rav1e_ipred_cfl_8bpc_neon,
+          })(dst_ptr, stride, edge_ptr, w, h, ac_ptr, angle);
+        }
+        _ => call_rust(dst),
+      },
+      PixelType::U16 => match mode {
+        PredictionMode::DC_PRED => {
+          (match variant {
+            PredictionVariant::NONE => rav1e_ipred_dc_128_16bpc_neon,
+            PredictionVariant::LEFT => rav1e_ipred_dc_left_16bpc_neon,
+            PredictionVariant::TOP => rav1e_ipred_dc_top_16bpc_neon,
+            PredictionVariant::BOTH => rav1e_ipred_dc_16bpc_neon,
+          })(
+            dst_hbd_ptr,
+            stride,
+            edge_hbd_ptr,
+            w,
+            h,
+            angle,
+            0,
+            0,
+            (1 << bit_depth) - 1,
+          );
+        }
+        PredictionMode::V_PRED if angle == 90 => {
+          rav1e_ipred_v_16bpc_neon(
+            dst_hbd_ptr,
+            stride,
+            edge_hbd_ptr,
+            w,
+            h,
+            0,
+            0,
+            angle,
+            (1 << bit_depth) - 1,
+          );
+        }
+        PredictionMode::H_PRED if angle == 180 => {
+          rav1e_ipred_h_16bpc_neon(
+            dst_hbd_ptr,
+            stride,
+            edge_hbd_ptr,
+            w,
+            h,
+            angle,
+            0,
+            0,
+            (1 << bit_depth) - 1,
+          );
+        }
+        PredictionMode::SMOOTH_PRED => {
+          rav1e_ipred_smooth_16bpc_neon(
+            dst_hbd_ptr,
+            stride,
+            edge_hbd_ptr,
+            w,
+            h,
+            angle,
+            0,
+            0,
+            (1 << bit_depth) - 1,
+          );
+        }
+        PredictionMode::SMOOTH_V_PRED => {
+          rav1e_ipred_smooth_v_16bpc_neon(
+            dst_hbd_ptr,
+            stride,
+            edge_hbd_ptr,
+            w,
+            h,
+            angle,
+            0,
+            0,
+            (1 << bit_depth) - 1,
+          );
+        }
+        PredictionMode::SMOOTH_H_PRED => {
+          rav1e_ipred_smooth_h_16bpc_neon(
+            dst_hbd_ptr,
+            stride,
+            edge_hbd_ptr,
+            w,
+            h,
+            angle,
+            0,
+            0,
+            (1 << bit_depth) - 1,
+          );
+        }
+        PredictionMode::PAETH_PRED => {
+          rav1e_ipred_paeth_16bpc_neon(
+            dst_hbd_ptr,
+            stride,
+            edge_hbd_ptr,
+            w,
+            h,
+            angle,
+            0,
+            0,
+            (1 << bit_depth) - 1,
+          );
+        }
+        PredictionMode::UV_CFL_PRED => {
+          let ac_ptr = ac.as_ptr() as *const _;
+          (match variant {
+            PredictionVariant::NONE => rav1e_ipred_cfl_128_16bpc_neon,
+            PredictionVariant::LEFT => rav1e_ipred_cfl_left_16bpc_neon,
+            PredictionVariant::TOP => rav1e_ipred_cfl_top_16bpc_neon,
+            PredictionVariant::BOTH => rav1e_ipred_cfl_16bpc_neon,
+          })(
+            dst_hbd_ptr,
+            stride,
+            edge_hbd_ptr,
+            w,
+            h,
+            ac_ptr,
+            angle,
+            (1 << bit_depth) - 1,
+          );
+        }
+        _ => call_rust(dst),
+      },
     }
   }
 }
