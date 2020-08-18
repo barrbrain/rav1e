@@ -134,15 +134,16 @@ pub fn dispatch_predict_intra<T: Pixel>(
 
   unsafe {
     let dst_ptr = dst.data_ptr_mut() as *mut _;
-    let dst_hbd_ptr = dst.data_ptr_mut() as *mut u16;
+    let dst_u16 = dst.data_ptr_mut() as *mut u16;
     let stride = T::to_asm_stride(dst.plane_cfg.stride) as libc::ptrdiff_t;
     let edge_ptr =
       edge_buf.data.as_ptr().offset(2 * MAX_TX_SIZE as isize) as *const _;
-    let edge_hbd_ptr =
+    let edge_u16 =
       edge_buf.data.as_ptr().offset(2 * MAX_TX_SIZE as isize) as *const u16;
     let w = tx_size.width() as libc::c_int;
     let h = tx_size.height() as libc::c_int;
     let angle = angle as libc::c_int;
+    let bd_max = (1 << bit_depth) - 1;
     match T::type_enum() {
       PixelType::U8 => match mode {
         PredictionMode::DC_PRED => {
@@ -193,94 +194,36 @@ pub fn dispatch_predict_intra<T: Pixel>(
             PredictionVariant::LEFT => rav1e_ipred_dc_left_16bpc_neon,
             PredictionVariant::TOP => rav1e_ipred_dc_top_16bpc_neon,
             PredictionVariant::BOTH => rav1e_ipred_dc_16bpc_neon,
-          })(
-            dst_hbd_ptr,
-            stride,
-            edge_hbd_ptr,
-            w,
-            h,
-            angle,
-            0,
-            0,
-            (1 << bit_depth) - 1,
-          );
+          })(dst_u16, stride, edge_u16, w, h, angle, 0, 0, bd_max);
         }
         PredictionMode::V_PRED if angle == 90 => {
           rav1e_ipred_v_16bpc_neon(
-            dst_hbd_ptr,
-            stride,
-            edge_hbd_ptr,
-            w,
-            h,
-            0,
-            0,
-            angle,
-            (1 << bit_depth) - 1,
+            dst_u16, stride, edge_u16, w, h, angle, 0, 0, bd_max,
           );
         }
         PredictionMode::H_PRED if angle == 180 => {
           rav1e_ipred_h_16bpc_neon(
-            dst_hbd_ptr,
-            stride,
-            edge_hbd_ptr,
-            w,
-            h,
-            angle,
-            0,
-            0,
-            (1 << bit_depth) - 1,
+            dst_u16, stride, edge_u16, w, h, angle, 0, 0, bd_max,
           );
         }
         PredictionMode::SMOOTH_PRED => {
           rav1e_ipred_smooth_16bpc_neon(
-            dst_hbd_ptr,
-            stride,
-            edge_hbd_ptr,
-            w,
-            h,
-            angle,
-            0,
-            0,
-            (1 << bit_depth) - 1,
+            dst_u16, stride, edge_u16, w, h, angle, 0, 0, bd_max,
           );
         }
         PredictionMode::SMOOTH_V_PRED => {
           rav1e_ipred_smooth_v_16bpc_neon(
-            dst_hbd_ptr,
-            stride,
-            edge_hbd_ptr,
-            w,
-            h,
-            angle,
-            0,
-            0,
-            (1 << bit_depth) - 1,
+            dst_u16, stride, edge_u16, w, h, angle, 0, 0, bd_max,
           );
         }
         PredictionMode::SMOOTH_H_PRED => {
           rav1e_ipred_smooth_h_16bpc_neon(
-            dst_hbd_ptr,
-            stride,
-            edge_hbd_ptr,
-            w,
-            h,
-            angle,
-            0,
-            0,
-            (1 << bit_depth) - 1,
+            dst_u16, stride, edge_u16, w, h, angle, 0, 0, bd_max,
           );
         }
         PredictionMode::PAETH_PRED => {
           rav1e_ipred_paeth_16bpc_neon(
-            dst_hbd_ptr,
-            stride,
-            edge_hbd_ptr,
-            w,
-            h,
-            angle,
-            0,
-            0,
-            (1 << bit_depth) - 1,
+            dst_u16, stride, edge_u16, w, h, angle, 0, 0, bd_max,
           );
         }
         PredictionMode::UV_CFL_PRED => {
@@ -290,16 +233,7 @@ pub fn dispatch_predict_intra<T: Pixel>(
             PredictionVariant::LEFT => rav1e_ipred_cfl_left_16bpc_neon,
             PredictionVariant::TOP => rav1e_ipred_cfl_top_16bpc_neon,
             PredictionVariant::BOTH => rav1e_ipred_cfl_16bpc_neon,
-          })(
-            dst_hbd_ptr,
-            stride,
-            edge_hbd_ptr,
-            w,
-            h,
-            ac_ptr,
-            angle,
-            (1 << bit_depth) - 1,
-          );
+          })(dst_u16, stride, edge_u16, w, h, ac_ptr, angle, bd_max);
         }
         _ => call_rust(dst),
       },
