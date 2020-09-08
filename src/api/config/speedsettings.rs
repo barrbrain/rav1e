@@ -271,8 +271,8 @@ impl SpeedSettings {
     speed >= 9
   }
 
-  fn fine_directional_intra_preset(speed: usize) -> bool {
-    speed != 2
+  fn fine_directional_intra_preset(_speed: usize) -> bool {
+    false
   }
 }
 
