@@ -114,21 +114,23 @@ impl Arbitrary for ArbitraryEncoder {
   fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self, Error> {
     let mut config = Config::default();
     config.threads = 1;
-    config.enc.width = u8::arbitrary(u)? as usize + 1;
-    config.enc.height = u8::arbitrary(u)? as usize + 1;
+    config.enc.width = u8::arbitrary(u)? as usize + 16;
+    config.enc.height = u8::arbitrary(u)? as usize + 16;
     config.enc.still_picture = Arbitrary::arbitrary(u)?;
-    config.enc.time_base =
-      Rational::new(Arbitrary::arbitrary(u)?, Arbitrary::arbitrary(u)?);
+    config.enc.time_base = Rational::new(
+      u32::arbitrary(u)?.max(1) as u64,
+      u32::arbitrary(u)?.max(1) as u64,
+    );
     config.enc.min_key_frame_interval = (u8::arbitrary(u)? % 4) as u64;
     config.enc.max_key_frame_interval = (u8::arbitrary(u)? % 4) as u64 + 1;
     config.enc.low_latency = Arbitrary::arbitrary(u)?;
-    config.enc.quantizer = Arbitrary::arbitrary(u)?;
+    config.enc.quantizer = u8::arbitrary(u)? as usize;
     config.enc.min_quantizer = Arbitrary::arbitrary(u)?;
     config.enc.bitrate = Arbitrary::arbitrary(u)?;
     // config.enc.tile_cols = Arbitrary::arbitrary(u)?;
     // config.enc.tile_rows = Arbitrary::arbitrary(u)?;
     // config.enc.tiles = Arbitrary::arbitrary(u)?;
-    config.enc.rdo_lookahead_frames = Arbitrary::arbitrary(u)?;
+    config.enc.rdo_lookahead_frames = u8::arbitrary(u)? as usize + 1;
     config.enc.speed_settings = SpeedSettings::from_preset(10);
     let frame_count = u8::arbitrary(u)? % 3 + 1;
     if u.is_empty() {
