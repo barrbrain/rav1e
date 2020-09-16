@@ -188,24 +188,30 @@ pub struct DecodeTestParameters {
 
 impl Arbitrary for DecodeTestParameters {
   fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self, Error> {
-    Ok(Self {
+    let valid_samplings =
+      [ChromaSampling::Cs420, ChromaSampling::Cs422, ChromaSampling::Cs444];
+    let mut p = Self {
       w: u8::arbitrary(u)? as usize + 16,
       h: u8::arbitrary(u)? as usize + 16,
-      speed: 10,
+      speed: u8::arbitrary(u)? as usize % 11,
       q: u8::arbitrary(u)? as usize,
       limit: (u8::arbitrary(u)? % 3) as usize + 1,
       bit_depth: 8,
-      chroma_sampling: Default::default(),
-      min_keyint: u64::arbitrary(u)? % 4,
-      max_keyint: u64::arbitrary(u)? % 4 + 1,
+      chroma_sampling: valid_samplings[(u8::arbitrary(u)? % 3) as usize],
+      min_keyint: (u8::arbitrary(u)? % 4) as u64,
+      max_keyint: (u8::arbitrary(u)? % 4) as u64,
       switch_frame_interval: 0,
       low_latency: bool::arbitrary(u)?,
-      error_resilient: false,
-      bitrate: i32::arbitrary(u)?,
-      tile_cols_log2: 1,
-      tile_rows_log2: 1,
-      still_picture: false,
-    })
+      error_resilient: bool::arbitrary(u)?,
+      bitrate: u16::arbitrary(u)? as i32,
+      tile_cols_log2: bool::arbitrary(u)? as usize,
+      tile_rows_log2: bool::arbitrary(u)? as usize,
+      still_picture: bool::arbitrary(u)?,
+    };
+    if p.still_picture {
+      p.limit = 1;
+    }
+    Ok(p)
   }
 }
 
