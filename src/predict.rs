@@ -21,7 +21,9 @@ cfg_if::cfg_if! {
   }
 }
 
-use crate::context::{MAX_SB_SIZE_LOG2, MAX_TX_SIZE};
+use crate::context::{
+  TileBlockOffset, MAX_SB_SIZE_LOG2, MAX_TX_SIZE, MI_SIZE_LOG2,
+};
 use crate::cpu_features::CpuFeatureLevel;
 use crate::encoder::FrameInvariants;
 use crate::frame::*;
@@ -1399,6 +1401,81 @@ pub(crate) mod rust {
           row[j] = T::cast_from(v);
         }
       }
+    }
+  }
+}
+
+pub fn luma_ac<T: Pixel>(
+  ac: &mut [i16], ts: &mut TileStateMut<'_, T>, tile_bo: TileBlockOffset,
+  bsize: BlockSize, tx_size: TxSize, fi: &FrameInvariants<T>,
+) {
+  let PlaneConfig { xdec, ydec, .. } = ts.input.planes[1].cfg;
+  let plane_bsize = bsize.subsampled_size(xdec, ydec);
+  let bo = if bsize.is_sub8x8(xdec, ydec) {
+    let offset = bsize.sub8x8_offset(xdec, ydec);
+    tile_bo.with_offset(offset.0, offset.1)
+  } else {
+    tile_bo
+  };
+  let rec = &ts.rec.planes[0];
+  let luma = &rec.subregion(Area::BlockStartingAt { bo: bo.0 });
+  let frame_bo = ts.to_frame_block_offset(bo);
+
+  let frame_clipped_bw: usize =
+    ((fi.w_in_b - frame_bo.0.x) << MI_SIZE_LOG2).min(bsize.width());
+  let frame_clipped_bh: usize =
+    ((fi.h_in_b - frame_bo.0.y) << MI_SIZE_LOG2).min(bsize.height());
+
+  // Similar to 'MaxLumaW' and 'MaxLumaH' stated in https://aomediacodec.github.io/av1-spec/#transform-block-semantics
+  let max_luma_w: usize;
+  let max_luma_h: usize;
+
+  if bsize.width() > BlockSize::BLOCK_8X8.width() {
+    let txw_log2 = tx_size.width_log2();
+    max_luma_w =
+      ((frame_clipped_bw + (1 << txw_log2) - 1) >> txw_log2) << txw_log2;
+  } else {
+    max_luma_w = bsize.width();
+  }
+  if bsize.height() > BlockSize::BLOCK_8X8.height() {
+    let txh_log2 = tx_size.height_log2();
+    max_luma_h =
+      ((frame_clipped_bh + (1 << txh_log2) - 1) >> txh_log2) << txh_log2;
+  } else {
+    max_luma_h = bsize.height();
+  }
+
+  let max_luma_x: usize = max_luma_w.max(8) - (1 << xdec);
+  let max_luma_y: usize = max_luma_h.max(8) - (1 << ydec);
+
+  let mut sum: i32 = 0;
+  for sub_y in 0..plane_bsize.height() {
+    for sub_x in 0..plane_bsize.width() {
+      // Refer to https://aomediacodec.github.io/av1-spec/#predict-chroma-from-luma-process
+      let luma_y = sub_y << ydec;
+      let luma_x = sub_x << xdec;
+      let y = luma_y.min(max_luma_y);
+      let x = luma_x.min(max_luma_x);
+      let mut sample: i16 = i16::cast_from(luma[y][x]);
+      if xdec != 0 {
+        sample += i16::cast_from(luma[y][x + 1]);
+      }
+      if ydec != 0 {
+        debug_assert!(xdec != 0);
+        sample +=
+          i16::cast_from(luma[y + 1][x]) + i16::cast_from(luma[y + 1][x + 1]);
+      }
+      sample <<= 3 - xdec - ydec;
+      ac[sub_y * plane_bsize.width() + sub_x] = sample;
+      sum += sample as i32;
+    }
+  }
+  let shift = plane_bsize.width_log2() + plane_bsize.height_log2();
+  let average = ((sum + (1 << (shift - 1))) >> shift) as i16;
+
+  for sub_y in 0..plane_bsize.height() {
+    for sub_x in 0..plane_bsize.width() {
+      ac[sub_y * plane_bsize.width() + sub_x] -= average;
     }
   }
 }
