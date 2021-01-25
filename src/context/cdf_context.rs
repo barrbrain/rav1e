@@ -292,6 +292,13 @@ impl CDFContext {
       self.inter_tx_cdf.first().unwrap().as_ptr() as usize;
     let inter_tx_cdf_end =
       inter_tx_cdf_start + size_of_val(&self.inter_tx_cdf);
+    let tx_size_cdf_start =
+      self.tx_size_cdf.first().unwrap().as_ptr() as usize;
+    let tx_size_cdf_end = tx_size_cdf_start + size_of_val(&self.tx_size_cdf);
+    let txfm_partition_cdf_start =
+      self.txfm_partition_cdf.first().unwrap().as_ptr() as usize;
+    let txfm_partition_cdf_end =
+      txfm_partition_cdf_start + size_of_val(&self.txfm_partition_cdf);
     let skip_cdfs_start = self.skip_cdfs.first().unwrap().as_ptr() as usize;
     let skip_cdfs_end = skip_cdfs_start + size_of_val(&self.skip_cdfs);
     let intra_inter_cdfs_start =
@@ -425,6 +432,8 @@ impl CDFContext {
       ("refmv_cdf", refmv_cdf_start, refmv_cdf_end),
       ("intra_tx_cdf", intra_tx_cdf_start, intra_tx_cdf_end),
       ("inter_tx_cdf", inter_tx_cdf_start, inter_tx_cdf_end),
+      ("tx_size_cdf", tx_size_cdf_start, tx_size_cdf_end),
+      ("txfm_partition_cdf", txfm_partition_cdf_start, txfm_partition_cdf_end),
       ("skip_cdfs", skip_cdfs_start, skip_cdfs_end),
       ("intra_inter_cdfs", intra_inter_cdfs_start, intra_inter_cdfs_end),
       ("angle_delta_cdf", angle_delta_cdf_start, angle_delta_cdf_end),
