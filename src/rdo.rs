@@ -1458,11 +1458,7 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
   modes.iter().take(num_modes_rdo).for_each(|&luma_mode| {
     let mvs = [MotionVector::default(); 2];
     let ref_frames = [INTRA_FRAME, NONE_FRAME];
-    let mut mode_set_chroma = ArrayVec::<[_; 2]>::new();
-    mode_set_chroma.push(luma_mode);
-    if is_chroma_block && luma_mode != PredictionMode::DC_PRED {
-      mode_set_chroma.push(PredictionMode::DC_PRED);
-    }
+    let mode_set_chroma = [luma_mode];
     luma_chroma_mode_rdo(
       luma_mode,
       fi,
@@ -1482,6 +1478,33 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
       AngleDelta::default(),
     );
   });
+  if is_chroma_block
+    && best.pred_mode_luma.is_intra()
+    && best.pred_mode_luma != PredictionMode::DC_PRED
+  {
+    let luma_mode = best.pred_mode_luma;
+    let mvs = [MotionVector::default(); 2];
+    let ref_frames = [INTRA_FRAME, NONE_FRAME];
+    let mode_set_chroma = [PredictionMode::DC_PRED];
+    luma_chroma_mode_rdo(
+      luma_mode,
+      fi,
+      bsize,
+      tile_bo,
+      ts,
+      cw,
+      rdo_type,
+      cw_checkpoint,
+      &mut best,
+      mvs,
+      ref_frames,
+      &mode_set_chroma,
+      true,
+      0,
+      &ArrayVec::<[CandidateMV; 9]>::new(),
+      AngleDelta::default(),
+    );
+  }
 
   if fi.config.speed_settings.fine_directional_intra
     && bsize >= BlockSize::BLOCK_8X8
