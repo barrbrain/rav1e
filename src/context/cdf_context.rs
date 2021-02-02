@@ -524,14 +524,16 @@ pub struct ContextWriterCheckpoint {
   pub bc: BlockContextCheckpoint,
 }
 
+use smallvec::SmallVec;
+
 pub struct CDFContextLog {
   pub(crate) off: usize,
-  pub(crate) data: Vec<[u16; CDF_LEN_MAX + 1]>,
+  pub(crate) data: SmallVec<[[u16; CDF_LEN_MAX + 1]; 1 << 13]>,
 }
 
 impl CDFContextLog {
   fn new(off: usize) -> Self {
-    Self { off, data: Vec::with_capacity(1 << 15) }
+    Self { off, data: SmallVec::new() }
   }
   fn len(&self) -> usize {
     self.data.len()
