@@ -9,6 +9,8 @@
 
 use super::*;
 
+const CDF_LEN_MAX: usize = 16 + 1;
+
 #[derive(Clone, Copy)]
 pub struct CDFContext {
   pub partition_cdf: [[u16; EXT_PARTITION_TYPES + 1]; PARTITION_CONTEXTS],
@@ -71,7 +73,7 @@ pub struct CDFContext {
   pub coeff_br_cdf: [[[[u16; BR_CDF_SIZE + 1]; LEVEL_CONTEXTS]; PLANE_TYPES];
     TxSize::TX_SIZES],
 
-  padding: [u16; 18],
+  padding: [u16; CDF_LEN_MAX],
 }
 
 impl CDFContext {
@@ -134,7 +136,7 @@ impl CDFContext {
       coeff_base_cdf: av1_default_coeff_base_multi_cdfs[qctx],
       coeff_br_cdf: av1_default_coeff_lps_multi_cdfs[qctx],
 
-      padding: [0; 18],
+      padding: [0; CDF_LEN_MAX],
     }
   }
 
@@ -524,7 +526,7 @@ pub struct ContextWriterCheckpoint {
 
 pub struct CDFContextLog {
   pub(crate) off: usize,
-  pub(crate) data: Vec<[u16; 18]>,
+  pub(crate) data: Vec<[u16; CDF_LEN_MAX + 1]>,
 }
 
 impl CDFContextLog {
@@ -538,11 +540,13 @@ impl CDFContextLog {
   pub fn add(&mut self, cdf: &[u16]) {
     let off = ((cdf.as_ptr() as *const u8 as usize) - self.off) as u16;
     unsafe {
-      let cdf_extra = &*(cdf as *const [u16] as *const [u16; 18]);
       let pos = self.data.len();
-      self.data.push(*cdf_extra);
       let entry = self.data.get_unchecked_mut(pos);
-      entry[17] = off;
+      let dst = entry.as_mut_ptr();
+      dst.copy_from_nonoverlapping(cdf.as_ptr(), CDF_LEN_MAX);
+      entry[CDF_LEN_MAX] = off;
+      self.data.set_len(pos + 1);
+      self.data.reserve(1);
     }
   }
   pub fn clear(&mut self) {
@@ -598,9 +602,9 @@ impl<'a> ContextWriter<'a> {
       while pos > checkpoint.fc_index {
         pos -= 1;
         let src = self.fc_log.data.get_unchecked_mut(pos);
-        let off = src[17] as usize;
+        let off = src[CDF_LEN_MAX] as usize;
         let dst = start.add(off) as *mut u16;
-        dst.copy_from_nonoverlapping(src.as_ptr(), 17);
+        dst.copy_from_nonoverlapping(src.as_ptr(), CDF_LEN_MAX);
       }
       self.fc_log.data.set_len(pos);
     }
