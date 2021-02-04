@@ -523,20 +523,20 @@ pub struct ContextWriterCheckpoint {
 }
 
 pub struct CDFContextLog {
-  base: usize,
+  base: *const CDFContext,
   data: Vec<[u16; CDF_LEN_MAX + 1]>,
 }
 
 impl CDFContextLog {
   fn new(fc: &CDFContext) -> Self {
-    Self { base: fc as *const _ as usize, data: Vec::with_capacity(1 << 15) }
+    Self { base: fc as _, data: Vec::with_capacity(1 << 15) }
   }
   fn checkpoint(&self) -> usize {
     self.data.len()
   }
   #[inline(always)]
   pub fn push(&mut self, cdf: &[u16]) {
-    let offset = cdf.as_ptr() as usize - self.base;
+    let offset = cdf.as_ptr() as usize - self.base as usize;
     debug_assert!(offset <= u16::MAX.into());
     unsafe {
       // Maintain an invariant of non-zero spare capacity, so that branching
