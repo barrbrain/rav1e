@@ -578,10 +578,10 @@ struct CDFContextLogLarge(CDFContextLogBase);
 impl CDFContextLogOps for CDFContextLogSmall {}
 impl CDFContextLogOps for CDFContextLogLarge {}
 impl CDFContextLogSize for CDFContextLogSmall {
-  const CDF_LEN_MAX: usize = 8;
+  const CDF_LEN_MAX: usize = 4;
 }
 impl CDFContextLogSize for CDFContextLogLarge {
-  const CDF_LEN_MAX: usize = 17;
+  const CDF_LEN_MAX: usize = 16;
 }
 impl CDFContextLogSmall {
   fn new(fc: &CDFContext) -> Self {
@@ -590,7 +590,7 @@ impl CDFContextLogSmall {
 }
 impl CDFContextLogLarge {
   fn new(fc: &CDFContext) -> Self {
-    Self(CDFContextLogBase::new(fc, 1 << 12))
+    Self(CDFContextLogBase::new(fc, 1 << 13))
   }
 }
 
@@ -611,7 +611,7 @@ impl CDFContextLog {
   }
   #[inline(always)]
   pub fn push(&mut self, cdf: &[u16]) {
-    if cdf.len() <= 8 {
+    if cdf.len() - 1 <= 4 {
       CDFContextLogSmall::push(&mut self.small.0, cdf);
     } else {
       CDFContextLogLarge::push(&mut self.large.0, cdf);
