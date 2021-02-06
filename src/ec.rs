@@ -10,7 +10,13 @@
 
 #![allow(non_camel_case_types)]
 
-pub use self::rust::*;
+cfg_if::cfg_if! {
+  if #[cfg(nasm_x86_64)] {
+    pub use crate::asm::x86::ec::*;
+  } else {
+    pub use self::rust::*;
+  }
+}
 
 use crate::util::{msb, ILog};
 use bitstream_io::{BigEndian, BitWrite, BitWriter};
