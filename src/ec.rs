@@ -522,7 +522,7 @@ where
   ///       must be exactly 32768. There should be at most 16 values.
   #[inline(always)]
   fn symbol(&mut self, s: u32, cdf: &[u16]) {
-    debug_assert!(cdf[cdf.len() - 1] == 0);
+    debug_assert!(cdf[cdf.len() - 1] < (1 << EC_PROB_SHIFT));
     let nms = cdf.len() - s as usize;
     let fl = if s > 0 { cdf[s as usize - 1] } else { 32768 };
     let fh = cdf[s as usize];
@@ -563,7 +563,7 @@ where
   ///       must be exactly 32768. There should be at most 16 values.
   fn symbol_bits(&self, s: u32, cdf: &[u16]) -> u32 {
     let mut bits = 0;
-    debug_assert!(cdf[cdf.len() - 1] == 0);
+    debug_assert!(cdf[cdf.len() - 1] < (1 << EC_PROB_SHIFT));
     debug_assert!(32768 <= self.rng);
     let rng = (self.rng >> 8) as u32;
     let fh = cdf[s as usize] as u32 >> EC_PROB_SHIFT;
