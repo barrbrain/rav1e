@@ -528,7 +528,7 @@ pub struct CDFContextLog {
 }
 
 impl CDFContextLog {
-  fn new(fc: &CDFContext) -> Self {
+  pub fn new(fc: &CDFContext) -> Self {
     Self { base: fc as *const _ as usize, data: Vec::with_capacity(1 << 15) }
   }
   fn checkpoint(&self) -> usize {

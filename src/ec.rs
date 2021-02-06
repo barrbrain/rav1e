@@ -1097,4 +1097,48 @@ mod test {
     assert_eq!(r.symbol(&cdf), 2);
     assert_eq!(r.symbol(&cdf), 2);
   }
+
+  #[test]
+  fn adapt() {
+    use crate::context::CDFContextLog;
+    let mut cdf = [7296, 3819, 1716, 0, 0];
+    let mut log = CDFContextLog::new(unsafe { &*(cdf.as_ptr() as *const _) });
+
+    let mut w = WriterEncoder::new();
+
+    w.symbol_with_update(0, &mut cdf, &mut log);
+    w.symbol_with_update(0, &mut cdf, &mut log);
+    w.symbol_with_update(0, &mut cdf, &mut log);
+    w.symbol_with_update(1, &mut cdf, &mut log);
+    w.symbol_with_update(1, &mut cdf, &mut log);
+    w.symbol_with_update(1, &mut cdf, &mut log);
+    w.symbol_with_update(2, &mut cdf, &mut log);
+    w.symbol_with_update(2, &mut cdf, &mut log);
+    w.symbol_with_update(2, &mut cdf, &mut log);
+
+    let b = w.done();
+
+    cdf = [7296, 3819, 1716, 0, 0];
+
+    let mut r = Reader::new(&b);
+
+    let nsymbs = cdf.len() - 1;
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 0);
+    update_cdf(&mut cdf, 0);
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 0);
+    update_cdf(&mut cdf, 0);
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 0);
+    update_cdf(&mut cdf, 0);
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 1);
+    update_cdf(&mut cdf, 1);
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 1);
+    update_cdf(&mut cdf, 1);
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 1);
+    update_cdf(&mut cdf, 1);
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 2);
+    update_cdf(&mut cdf, 2);
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 2);
+    update_cdf(&mut cdf, 2);
+    assert_eq!(r.symbol(&cdf[..nsymbs]), 2);
+  }
 }
