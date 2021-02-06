@@ -10,13 +10,7 @@
 
 #![allow(non_camel_case_types)]
 
-cfg_if::cfg_if! {
-  if #[cfg(nasm_x86_64)] {
-    pub use crate::asm::x86::ec::*;
-  } else {
-    pub use self::rust::*;
-  }
-}
+pub use self::rust::*;
 
 use crate::util::{msb, ILog};
 use bitstream_io::{BigEndian, BitWrite, BitWriter};
@@ -525,7 +519,7 @@ where
     debug_assert!(cdf[cdf.len() - 1] < (1 << EC_PROB_SHIFT));
     let nms = cdf.len() - s as usize;
     let fl = if s > 0 { cdf[s as usize - 1] } else { 32768 };
-    let fh = cdf[s as usize];
+    let fh = if nms > 1 { cdf[s as usize] } else { 0 };
     debug_assert!(fh <= fl);
     debug_assert!(fl <= 32768);
     self.store(fl, fh, nms as u16);

@@ -603,7 +603,8 @@ impl<'a> ContextWriter<'a> {
   }
 
   pub fn cdf_element_prob(cdf: &[u16], element: usize) -> u16 {
-    (if element > 0 { cdf[element - 1] } else { 32768 }) - cdf[element]
+    (if element > 0 { cdf[element - 1] } else { 32768 })
+      - (if element + 2 < cdf.len() { cdf[element] } else { 0 })
   }
 
   pub fn checkpoint(&self) -> ContextWriterCheckpoint {
