@@ -882,8 +882,8 @@ pub(crate) mod rust {
   // Function to update the CDF for Writer calls that do so.
   pub fn update_cdf(cdf: &mut [u16], val: u32) {
     let nsymbs = cdf.len() - 1;
-    let rate = 3 + (nsymbs >> 1).min(2) + (cdf[nsymbs] >> 4) as usize;
-    cdf[nsymbs] += 1 - (cdf[nsymbs] >> 5);
+    let rate = 3 + (nsymbs >> 1).min(2) + (cdf[nsymbs - 1] >> 4) as usize;
+    cdf[nsymbs - 1] += 1 - (cdf[nsymbs - 1] >> 5);
 
     // Single loop (faster)
     for (i, v) in cdf[..nsymbs - 1].iter_mut().enumerate() {
