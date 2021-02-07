@@ -45,7 +45,6 @@ pub struct CDFContext {
   pub nmv_context: NMVContext,
   pub deblock_delta_multi_cdf: [[u16; DELTA_LF_PROBS + 1]; FRAME_LF_COUNT],
   pub deblock_delta_cdf: [u16; DELTA_LF_PROBS + 1],
-  pub spatial_segmentation_cdfs: [[u16; 8]; 3],
   pub lrf_switchable_cdf: [u16; 3],
   pub lrf_sgrproj_cdf: [u16; 2],
   pub lrf_wiener_cdf: [u16; 2],
@@ -70,6 +69,8 @@ pub struct CDFContext {
     [[[[u16; 4]; SIG_COEF_CONTEXTS]; PLANE_TYPES]; TxSize::TX_SIZES],
   pub coeff_br_cdf:
     [[[[u16; BR_CDF_SIZE]; LEVEL_CONTEXTS]; PLANE_TYPES]; TxSize::TX_SIZES],
+
+  pub spatial_segmentation_cdfs: [[u16; 8]; 3],
 
   padding: [u16; CDF_LEN_MAX],
 }
