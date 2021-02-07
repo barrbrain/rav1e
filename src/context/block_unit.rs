@@ -484,21 +484,25 @@ impl<'a> BlockContext<'a> {
 }
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct NMVComponent {
-  pub classes_cdf: [u16; MV_CLASSES],
   pub class0_fp_cdf: [[u16; MV_FP_SIZE]; CLASS0_SIZE],
-  pub fp_cdf: [u16; MV_FP_SIZE],
   pub sign_cdf: [u16; 2],
   pub class0_hp_cdf: [u16; 2],
   pub hp_cdf: [u16; 2],
   pub class0_cdf: [u16; CLASS0_SIZE],
   pub bits_cdf: [[u16; 2]; MV_OFFSET_BITS],
+  pub fp_cdf: [u16; MV_FP_SIZE],
+  pub classes_cdf: [u16; MV_CLASSES],
+  // MV_CLASSES + 5 == 16; pad the last CDF for rollback.
+  padding: [u16; 5],
 }
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct NMVContext {
-  pub joints_cdf: [u16; MV_JOINTS],
   pub comps: [NMVComponent; 2],
+  pub joints_cdf: [u16; MV_JOINTS],
 }
 
 // lv_map
@@ -528,6 +532,7 @@ pub static default_nmv_context: NMVContext = {
           cdf!(128 * 234),
           cdf!(128 * 240),
         ],
+        padding: [0; 5],
       },
       NMVComponent {
         classes_cdf: cdf!(
@@ -551,6 +556,7 @@ pub static default_nmv_context: NMVContext = {
           cdf!(128 * 234),
           cdf!(128 * 240),
         ],
+        padding: [0; 5],
       },
     ],
   }
