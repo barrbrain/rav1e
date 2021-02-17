@@ -237,7 +237,7 @@ impl<'a> ContextWriter<'a> {
   ) {
     let ctx = self.bc.skip_context(bo);
     let cdf = &mut self.fc.skip_cdfs[ctx];
-    symbol_with_update!(self, w, skip as u32, cdf);
+    symbol_with_update!(self, w, skip as u32, cdf, 2);
   }
 
   pub fn get_segment_pred(&self, bo: TileBlockOffset) -> (u8, u8) {
@@ -284,11 +284,11 @@ impl<'a> ContextWriter<'a> {
 
   pub fn write_cfl_alphas(&mut self, w: &mut dyn Writer, cfl: CFLParams) {
     let cdf = &mut self.fc.cfl_sign_cdf;
-    symbol_with_update!(self, w, cfl.joint_sign(), cdf);
+    symbol_with_update!(self, w, cfl.joint_sign(), cdf, 8);
     for uv in 0..2 {
       if cfl.sign[uv] != CFL_SIGN_ZERO {
         let cdf = &mut self.fc.cfl_alpha_cdf[cfl.context(uv)];
-        symbol_with_update!(self, w, cfl.index(uv), cdf);
+        symbol_with_update!(self, w, cfl.index(uv), cdf, 16);
       }
     }
   }
@@ -312,13 +312,13 @@ impl<'a> ContextWriter<'a> {
     if has_rows && has_cols {
       if ctx < PARTITION_TYPES {
         let cdf = &mut self.fc.partition_w8_cdf[ctx];
-        symbol_with_update!(self, w, p as u32, cdf);
+        symbol_with_update!(self, w, p as u32, cdf, 4);
       } else if ctx < 4 * PARTITION_TYPES {
         let cdf = &mut self.fc.partition_cdf[ctx - PARTITION_TYPES];
-        symbol_with_update!(self, w, p as u32, cdf);
+        symbol_with_update!(self, w, p as u32, cdf, 10);
       } else {
         let cdf = &mut self.fc.partition_w128_cdf[ctx - 4 * PARTITION_TYPES];
-        symbol_with_update!(self, w, p as u32, cdf);
+        symbol_with_update!(self, w, p as u32, cdf, 8);
       }
     } else if !has_rows && has_cols {
       assert!(
@@ -430,7 +430,7 @@ impl<'a> ContextWriter<'a> {
       (last_active_segid + 1) as i32,
     );
     let cdf = &mut self.fc.spatial_segmentation_cdfs[cdf_index as usize];
-    symbol_with_update!(self, w, coded_id as u32, cdf);
+    symbol_with_update!(self, w, coded_id as u32, cdf, 8);
   }
 }
 

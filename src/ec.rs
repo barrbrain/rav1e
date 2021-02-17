@@ -27,6 +27,20 @@ const EC_PROB_SHIFT: u32 = 6;
 const EC_MIN_PROB: u32 = 4;
 type ec_window = u32;
 
+macro_rules! symbol_with_update_decl {
+  ($($n:expr),*) => {
+    $(
+      paste::item! {
+        /// Write a symbol s, using the passed in cdf reference; updates the referenced cdf.
+        fn [<symbol_with_update $n>](
+          &mut self, s: u32, cdf: &mut [u16; $n],
+          log: &mut crate::context::CDFContextLog,
+        );
+      }
+    )*
+  }
+}
+
 /// Public trait interface to a bitstream Writer: a Counter can be
 /// used to count bits for cost analysis without actually storing
 /// anything (using a new::WriterCounter() as a Writer), to record
@@ -41,11 +55,7 @@ pub trait Writer {
   /// precision to write a symbol s using the passed in cdf reference;
   /// leaves cdf unchanged
   fn symbol_bits(&self, s: u32, cdf: &[u16]) -> u32;
-  /// Write a symbol s, using the passed in cdf reference; updates the referenced cdf.
-  fn symbol_with_update(
-    &mut self, s: u32, cdf: &mut [u16],
-    log: &mut crate::context::CDFContextLog,
-  );
+  symbol_with_update_decl!(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
   /// Write a bool using passed in probability
   fn bool(&mut self, val: bool, f: u16);
   /// Write a single bit with flat proability
@@ -482,6 +492,39 @@ impl WriterBase<WriterEncoder> {
   }
 }
 
+macro_rules! symbol_with_update_impl {
+  ($($n:expr),*) => {
+    $(
+      paste::item! {
+        /// Encodes a symbol given a cumulative distribution function (CDF)
+        /// table in Q15, then updates the CDF probabilities to relect we've
+        /// written one more symbol 's'.
+        /// `s`: The index of the symbol to encode.
+        /// `cdf`: The CDF, such that symbol s falls in the range
+        ///        `[s > 0 ? cdf[s - 1] : 0, cdf[s])`.
+        ///       The values must be monotonically non-decreasing, and the last value
+        ///       must be greater 32704. There should be at most 16 values.
+        ///       The lower 6 bits of the last value hold the count.
+        fn [<symbol_with_update $n>](
+          &mut self, s: u32, cdf: &mut [u16; $n],
+          log: &mut crate::context::CDFContextLog,
+        ) {
+          #[cfg(feature = "desync_finder")]
+          {
+            if self.debug {
+              self.print_backtrace(s);
+            }
+          }
+          log.push(cdf);
+          self.symbol(s, cdf);
+
+          update_cdf(cdf, s);
+        }
+      }
+    )*
+  }
+}
+
 /// Generic/shared implementation for Writers with StorageBackends (ie, Encoders and Recorders)
 impl<S> Writer for WriterBase<S>
 where
@@ -534,30 +577,7 @@ where
     debug_assert!(fl <= 32768);
     self.store(fl, fh, nms as u16);
   }
-  /// Encodes a symbol given a cumulative distribution function (CDF)
-  /// table in Q15, then updates the CDF probabilities to relect we've
-  /// written one more symbol 's'.
-  /// `s`: The index of the symbol to encode.
-  /// `cdf`: The CDF, such that symbol s falls in the range
-  ///        `[s > 0 ? cdf[s - 1] : 0, cdf[s])`.
-  ///       The values must be monotonically non-decreasing, and the last value
-  ///       must be greater 32704. There should be at most 16 values.
-  ///       The lower 6 bits of the last value hold the count.
-  fn symbol_with_update(
-    &mut self, s: u32, cdf: &mut [u16],
-    log: &mut crate::context::CDFContextLog,
-  ) {
-    #[cfg(feature = "desync_finder")]
-    {
-      if self.debug {
-        self.print_backtrace(s);
-      }
-    }
-    log.push(cdf);
-    self.symbol(s, cdf);
-
-    update_cdf(cdf, s);
-  }
+  symbol_with_update_impl!(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
   /// Returns approximate cost for a symbol given a cumulative
   /// distribution function (CDF) table and current write state.
   /// `s`: The index of the symbol to encode.
