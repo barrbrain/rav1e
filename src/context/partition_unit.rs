@@ -236,7 +236,8 @@ impl<'a> ContextWriter<'a> {
     &mut self, w: &mut dyn Writer, bo: TileBlockOffset, skip: bool,
   ) {
     let ctx = self.bc.skip_context(bo);
-    symbol_with_update!(self, w, skip as u32, &mut self.fc.skip_cdfs[ctx]);
+    let cdf = &mut self.fc.skip_cdfs[ctx];
+    symbol_with_update!(self, w, skip as u32, cdf);
   }
 
   pub fn get_segment_pred(&self, bo: TileBlockOffset) -> (u8, u8) {
@@ -282,15 +283,12 @@ impl<'a> ContextWriter<'a> {
   }
 
   pub fn write_cfl_alphas(&mut self, w: &mut dyn Writer, cfl: CFLParams) {
-    symbol_with_update!(self, w, cfl.joint_sign(), &mut self.fc.cfl_sign_cdf);
+    let cdf = &mut self.fc.cfl_sign_cdf;
+    symbol_with_update!(self, w, cfl.joint_sign(), cdf);
     for uv in 0..2 {
       if cfl.sign[uv] != CFL_SIGN_ZERO {
-        symbol_with_update!(
-          self,
-          w,
-          cfl.index(uv),
-          &mut self.fc.cfl_alpha_cdf[cfl.context(uv)]
-        );
+        let cdf = &mut self.fc.cfl_alpha_cdf[cfl.context(uv)];
+        symbol_with_update!(self, w, cfl.index(uv), cdf);
       }
     }
   }
@@ -431,12 +429,8 @@ impl<'a> ContextWriter<'a> {
       pred as i32,
       (last_active_segid + 1) as i32,
     );
-    symbol_with_update!(
-      self,
-      w,
-      coded_id as u32,
-      &mut self.fc.spatial_segmentation_cdfs[cdf_index as usize]
-    );
+    let cdf = &mut self.fc.spatial_segmentation_cdfs[cdf_index as usize];
+    symbol_with_update!(self, w, coded_id as u32, cdf);
   }
 }
 

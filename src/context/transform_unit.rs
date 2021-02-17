@@ -734,12 +734,8 @@ impl<'a> ContextWriter<'a> {
     if tx_size != TX_4X4 && depth < MAX_VARTX_DEPTH {
       let ctx = self.txfm_partition_context(bo, bsize, tx_size, tbx, tby);
 
-      symbol_with_update!(
-        self,
-        w,
-        txfm_split as u32,
-        &mut self.fc.txfm_partition_cdf[ctx]
-      );
+      let cdf = &mut self.fc.txfm_partition_cdf[ctx];
+      symbol_with_update!(self, w, txfm_split as u32, cdf);
     } else {
       debug_assert!(!txfm_split);
     }
