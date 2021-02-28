@@ -777,9 +777,8 @@ fn luma_chroma_mode_rdo<T: Pixel>(
   cw: &mut ContextWriter, rdo_type: RDOType,
   cw_checkpoint: &ContextWriterCheckpoint, best: &mut PartitionParameters,
   mvs: [MotionVector; 2], ref_frames: [RefType; 2],
-  mode_set_chroma: &[PredictionMode], luma_mode_is_intra: bool,
-  mode_context: usize, mv_stack: &ArrayVec<[CandidateMV; 9]>,
-  angle_delta: AngleDelta,
+  chroma_mode: PredictionMode, luma_mode_is_intra: bool, mode_context: usize,
+  mv_stack: &ArrayVec<[CandidateMV; 9]>, angle_delta: AngleDelta,
 ) {
   let PlaneConfig { xdec, ydec, .. } = ts.input.planes[1].cfg;
 
@@ -831,82 +830,74 @@ fn luma_chroma_mode_rdo<T: Pixel>(
       let (tx_size, tx_type) = rdo_tx_size_type(
         fi, ts, cw, bsize, tile_bo, luma_mode, ref_frames, mvs, skip,
       );
-      for &chroma_mode in mode_set_chroma.iter() {
-        let wr = &mut WriterCounter::new();
-        let tell = wr.tell_frac();
+      let wr = &mut WriterCounter::new();
+      let tell = wr.tell_frac();
 
-        if bsize >= BlockSize::BLOCK_8X8 && bsize.is_sqr() {
-          cw.write_partition(
-            wr,
-            tile_bo,
-            PartitionType::PARTITION_NONE,
-            bsize,
-          );
-        }
+      if bsize >= BlockSize::BLOCK_8X8 && bsize.is_sqr() {
+        cw.write_partition(wr, tile_bo, PartitionType::PARTITION_NONE, bsize);
+      }
 
-        // TODO(yushin): luma and chroma would have different decision based on chroma format
-        let need_recon_pixel =
-          luma_mode_is_intra && tx_size.block_size() != bsize;
+      // TODO(yushin): luma and chroma would have different decision based on chroma format
+      let need_recon_pixel =
+        luma_mode_is_intra && tx_size.block_size() != bsize;
 
-        encode_block_pre_cdef(&fi.sequence, ts, cw, wr, bsize, tile_bo, skip);
-        let (has_coeff, tx_dist) = encode_block_post_cdef(
+      encode_block_pre_cdef(&fi.sequence, ts, cw, wr, bsize, tile_bo, skip);
+      let (has_coeff, tx_dist) = encode_block_post_cdef(
+        fi,
+        ts,
+        cw,
+        wr,
+        luma_mode,
+        chroma_mode,
+        angle_delta,
+        ref_frames,
+        mvs,
+        bsize,
+        tile_bo,
+        skip,
+        CFLParams::default(),
+        tx_size,
+        tx_type,
+        mode_context,
+        mv_stack,
+        rdo_type,
+        need_recon_pixel,
+        false,
+      );
+
+      let rate = wr.tell_frac() - tell;
+      let distortion = if fi.use_tx_domain_distortion && !need_recon_pixel {
+        compute_tx_distortion(
           fi,
           ts,
-          cw,
-          wr,
-          luma_mode,
-          chroma_mode,
-          angle_delta,
-          ref_frames,
-          mvs,
           bsize,
+          is_chroma_block,
           tile_bo,
+          tx_dist,
           skip,
-          CFLParams::default(),
-          tx_size,
-          tx_type,
-          mode_context,
-          mv_stack,
-          rdo_type,
-          need_recon_pixel,
           false,
-        );
-
-        let rate = wr.tell_frac() - tell;
-        let distortion = if fi.use_tx_domain_distortion && !need_recon_pixel {
-          compute_tx_distortion(
-            fi,
-            ts,
-            bsize,
-            is_chroma_block,
-            tile_bo,
-            tx_dist,
-            skip,
-            false,
-          )
-        } else {
-          compute_distortion(fi, ts, bsize, is_chroma_block, tile_bo, false)
-        };
-        let is_zero_dist = distortion.0 == 0;
-        let rd = compute_rd_cost(fi, rate, distortion);
-        if rd < best.rd_cost {
-          //if rd < best.rd_cost || luma_mode == PredictionMode::NEW_NEWMV {
-          best.rd_cost = rd;
-          best.pred_mode_luma = luma_mode;
-          best.pred_mode_chroma = chroma_mode;
-          best.angle_delta = angle_delta;
-          best.ref_frames = ref_frames;
-          best.mvs = mvs;
-          best.skip = skip;
-          best.has_coeff = has_coeff;
-          best.tx_size = tx_size;
-          best.tx_type = tx_type;
-          best.sidx = sidx;
-          zero_distortion = is_zero_dist;
-        }
-
-        cw.rollback(cw_checkpoint);
+        )
+      } else {
+        compute_distortion(fi, ts, bsize, is_chroma_block, tile_bo, false)
+      };
+      let is_zero_dist = distortion.0 == 0;
+      let rd = compute_rd_cost(fi, rate, distortion);
+      if rd < best.rd_cost {
+        best.rd_cost = rd;
+        best.pred_mode_luma = luma_mode;
+        best.pred_mode_chroma = chroma_mode;
+        best.angle_delta = angle_delta;
+        best.ref_frames = ref_frames;
+        best.mvs = mvs;
+        best.skip = skip;
+        best.has_coeff = has_coeff;
+        best.tx_size = tx_size;
+        best.tx_type = tx_type;
+        best.sidx = sidx;
+        zero_distortion = is_zero_dist;
       }
+
+      cw.rollback(cw_checkpoint);
     }
 
     zero_distortion
@@ -1309,8 +1300,6 @@ fn inter_frame_rdo_mode_decision<T: Pixel>(
 
   sorted.iter().take(num_modes_rdo).for_each(
     |&((luma_mode, i), mvs, _satd)| {
-      let mode_set_chroma = ArrayVec::from([luma_mode]);
-
       luma_chroma_mode_rdo(
         luma_mode,
         fi,
@@ -1323,7 +1312,7 @@ fn inter_frame_rdo_mode_decision<T: Pixel>(
         &mut best,
         mvs,
         ref_frames_set[i],
-        &mode_set_chroma,
+        luma_mode,
         false,
         mode_contexts[i],
         &mv_stacks[i],
@@ -1458,7 +1447,6 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
   modes.iter().take(num_modes_rdo).for_each(|&luma_mode| {
     let mvs = [MotionVector::default(); 2];
     let ref_frames = [INTRA_FRAME, NONE_FRAME];
-    let mode_set_chroma = [luma_mode];
     luma_chroma_mode_rdo(
       luma_mode,
       fi,
@@ -1471,7 +1459,7 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
       &mut best,
       mvs,
       ref_frames,
-      &mode_set_chroma,
+      luma_mode,
       true,
       0,
       &ArrayVec::<[CandidateMV; 9]>::new(),
@@ -1485,7 +1473,6 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
     let luma_mode = best.pred_mode_luma;
     let mvs = [MotionVector::default(); 2];
     let ref_frames = [INTRA_FRAME, NONE_FRAME];
-    let mode_set_chroma = [PredictionMode::DC_PRED];
     luma_chroma_mode_rdo(
       luma_mode,
       fi,
@@ -1498,7 +1485,7 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
       &mut best,
       mvs,
       ref_frames,
-      &mode_set_chroma,
+      PredictionMode::DC_PRED,
       true,
       0,
       &ArrayVec::<[CandidateMV; 9]>::new(),
@@ -1515,7 +1502,7 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
 
     let mvs = [MotionVector::default(); 2];
     let ref_frames = [INTRA_FRAME, NONE_FRAME];
-    let mode_set_chroma = [best.pred_mode_chroma];
+    let chroma_mode = best.pred_mode_chroma;
     let mv_stack = ArrayVec::<[_; 9]>::new();
     let mut best_angle_delta = best.angle_delta;
     let mut angle_delta_rdo = |y, uv| -> AngleDelta {
@@ -1532,7 +1519,7 @@ fn intra_frame_rdo_mode_decision<T: Pixel>(
           &mut best,
           mvs,
           ref_frames,
-          &mode_set_chroma,
+          chroma_mode,
           true,
           0,
           &mv_stack,
