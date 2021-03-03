@@ -1125,6 +1125,22 @@ impl<T: Pixel> ContextInner<T> {
       .unwrap()
       .save(data_location.join(file_name).with_extension("png"))
       .unwrap();
+      let file_name = format!("{:010}-scales", fi.input_frameno);
+      let buf: Vec<_> = plane
+        .iter()
+        .zip(fi.distortion_scales.iter())
+        .map(|(&a, &d)| {
+          ((a.0 as u64 * d.0 as u64 + (1 << 17)) >> 18).max(0).min(255) as u8
+        })
+        .collect();
+      image::GrayImage::from_vec(
+        fi.w_in_imp_b as u32,
+        fi.h_in_imp_b as u32,
+        buf,
+      )
+      .unwrap()
+      .save(data_location.join(file_name).with_extension("png"))
+      .unwrap();
       fi.activity_mask.dump(data_location, fi.input_frameno);
     }
   }
