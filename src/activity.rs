@@ -29,20 +29,21 @@ impl ActivityMask {
     let PlaneConfig { width, height, .. } = luma_plane.cfg;
 
     let granularity = 3;
+    let w_in_b = width.align_power_of_two_and_shift(granularity);
+    let h_in_b = height.align_power_of_two_and_shift(granularity);
 
     let aligned_luma = Rect {
       x: 0_isize,
       y: 0_isize,
-      width: (width >> granularity) << granularity,
-      height: (height >> granularity) << granularity,
+      width: width.align_power_of_two(granularity),
+      height: height.align_power_of_two(granularity),
     };
     let luma = PlaneRegion::new(luma_plane, aligned_luma);
 
-    let mut variances =
-      Vec::with_capacity((height >> granularity) * (width >> granularity));
+    let mut variances = Vec::with_capacity(w_in_b * h_in_b);
 
-    for y in 0..height >> granularity {
-      for x in 0..width >> granularity {
+    for y in 0..h_in_b {
+      for x in 0..w_in_b {
         let block_rect = Area::Rect {
           x: (x << granularity) as isize,
           y: (y << granularity) as isize,
@@ -59,12 +60,12 @@ impl ActivityMask {
   }
 
   pub fn variance_at(&self, x: usize, y: usize) -> Option<f64> {
-    let (dec_width, dec_height) =
-      (self.width >> self.granularity, self.height >> self.granularity);
-    if x > dec_width || y > dec_height {
+    let w_in_b = self.width.align_power_of_two_and_shift(self.granularity);
+    let h_in_b = self.height.align_power_of_two_and_shift(self.granularity);
+    if x > w_in_b || y > h_in_b {
       None
     } else {
-      Some(*self.variances.get(x + dec_width * y).unwrap() as f64)
+      Some(*self.variances.get(x + w_in_b * y).unwrap() as f64)
     }
   }
 
@@ -88,7 +89,7 @@ impl ActivityMask {
     } else {
       let activity = self
         .variances
-        .chunks_exact(self.width >> granularity)
+        .chunks_exact(self.width.align_power_of_two_and_shift(granularity))
         .skip(dec_y)
         .take(dec_height)
         .map(|row| {
