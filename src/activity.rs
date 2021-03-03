@@ -10,11 +10,12 @@
 use crate::frame::*;
 use crate::tiling::*;
 use crate::util::*;
+use itertools::izip;
 use rust_hawktracer::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct ActivityMask {
-  variances: Vec<f64>,
+  variances: Vec<u32>,
   // Width and height of the original frame that is masked
   width: usize,
   height: usize,
@@ -50,24 +51,7 @@ impl ActivityMask {
         };
 
         let block = luma.subregion(block_rect);
-
-        let mean: f64 = block
-          .rows_iter()
-          .flatten()
-          .map(|&pix| {
-            let pix: i16 = CastFromPrimitive::cast_from(pix);
-            pix as f64
-          })
-          .sum::<f64>()
-          / 64.0_f64;
-        let variance: f64 = block
-          .rows_iter()
-          .flatten()
-          .map(|&pix| {
-            let pix: i16 = CastFromPrimitive::cast_from(pix);
-            (pix as f64 - mean).powi(2)
-          })
-          .sum::<f64>();
+        let variance = variance_8x8(&block);
         variances.push(variance);
       }
     }
@@ -80,7 +64,7 @@ impl ActivityMask {
     if x > dec_width || y > dec_height {
       None
     } else {
-      Some(*self.variances.get(x + dec_width * y).unwrap())
+      Some(*self.variances.get(x + dec_width * y).unwrap() as f64)
     }
   }
 
@@ -107,11 +91,52 @@ impl ActivityMask {
         .chunks_exact(self.width >> granularity)
         .skip(dec_y)
         .take(dec_height)
-        .map(|row| row.iter().skip(dec_x).take(dec_width).sum::<f64>())
-        .sum::<f64>()
+        .map(|row| {
+          row
+            .iter()
+            .skip(dec_x)
+            .take(dec_width)
+            .map(|&a| a as u64)
+            .sum::<u64>()
+        })
+        .sum::<u64>() as f64
         / (dec_width as f64 * dec_height as f64);
 
       Some(activity.cbrt().sqrt())
     }
   }
+}
+
+// The microbenchmarks perform better with inlining turned off
+#[inline(never)]
+fn variance_8x8<T: Pixel>(src: &PlaneRegion<'_, T>) -> u32 {
+  debug_assert!(src.plane_cfg.xdec == 0);
+  debug_assert!(src.plane_cfg.ydec == 0);
+
+  // Sum into columns to improve auto-vectorization
+  let mut sum_s_cols: [u16; 8] = [0; 8];
+  let mut sum_s2_cols: [u32; 8] = [0; 8];
+
+  // Check upfront that 8 rows are available.
+  let _row = &src[7];
+
+  for j in 0..8 {
+    let row = &src[j][0..8];
+    for (sum_s, sum_s2, s) in izip!(&mut sum_s_cols, &mut sum_s2_cols, row) {
+      // Don't convert directly to u32 to allow better vectorization
+      let s: u16 = u16::cast_from(*s);
+      *sum_s += s;
+
+      // Convert to u32 to avoid overflows when multiplying
+      let s: u32 = s as u32;
+      *sum_s2 += s * s;
+    }
+  }
+
+  // Sum together the sum of columns
+  let sum_s = sum_s_cols.iter().map(|&a| u32::cast_from(a)).sum::<u32>();
+  let sum_s2 = sum_s2_cols.iter().sum::<u32>();
+
+  // Use sums to calculate variance
+  sum_s2 - ((sum_s * sum_s + 32) >> 6)
 }
