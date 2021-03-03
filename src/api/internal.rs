@@ -1102,6 +1102,33 @@ impl<T: Pixel> ContextInner<T> {
     }
   }
 
+  /// Computes the activity scales for the current output frame.
+  #[hawktracer(compute_activity_scales)]
+  fn compute_activity_scales(&mut self) {
+    let fi = &mut self.frame_data.get_mut(&self.output_frameno).unwrap().fi;
+    let frame = self.frame_q[&fi.input_frameno].as_ref().unwrap();
+    fi.activity_mask = ActivityMask::from_plane(&frame.planes[0]);
+    fi.activity_mask
+      .fill_activity_scales(fi.sequence.bit_depth, &mut fi.activity_scales);
+    #[cfg(feature = "dump_lookahead_data")]
+    {
+      let data_location = Self::build_dump_properties();
+      let plane = &fi.activity_scales;
+      let file_name = format!("{:010}-activity", fi.input_frameno);
+      let buf: Vec<_> =
+        plane.iter().map(|&p| ((p.0 >> 4) - 128) as u8).collect();
+      image::GrayImage::from_vec(
+        fi.w_in_imp_b as u32,
+        fi.h_in_imp_b as u32,
+        buf,
+      )
+      .unwrap()
+      .save(data_location.join(file_name).with_extension("png"))
+      .unwrap();
+      fi.activity_mask.dump(data_location, fi.input_frameno);
+    }
+  }
+
   pub(crate) fn encode_packet(
     &mut self, cur_output_frameno: u64,
   ) -> Result<Packet<T>, EncoderStatus> {
@@ -1306,6 +1333,10 @@ impl<T: Pixel> ContextInner<T> {
     if self.config.temporal_rdo() {
       // Compute the block importances for the current output frame.
       self.compute_block_importances();
+    }
+
+    if self.config.tune == Tune::Psychovisual {
+      self.compute_activity_scales();
     }
 
     let cur_output_frameno = self.output_frameno;

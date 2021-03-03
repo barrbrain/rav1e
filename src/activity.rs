@@ -8,6 +8,7 @@
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
 use crate::frame::*;
+use crate::rdo::{ssim_boost, DistortionScale};
 use crate::tiling::*;
 use crate::util::*;
 use itertools::izip;
@@ -105,6 +106,30 @@ impl ActivityMask {
 
       Some(activity.cbrt().sqrt())
     }
+  }
+
+  pub fn fill_activity_scales(
+    &self, bit_depth: usize, activity_scales: &mut Box<[DistortionScale]>,
+  ) {
+    for (dst, &src) in activity_scales.iter_mut().zip(self.variances.iter()) {
+      *dst = ssim_boost(src as i64, src as i64, bit_depth);
+    }
+  }
+
+  #[cfg(feature = "dump_lookahead_data")]
+  pub fn dump(&self, data_location: std::path::PathBuf, input_frameno: u64) {
+    let plane = &self.variances;
+    let file_name = format!("{:010}-variance", input_frameno);
+    let buf: Vec<_> =
+      plane.iter().map(|&p| (p as f32 * 4.).sqrt() as u8).collect();
+    image::GrayImage::from_vec(
+      self.width.align_power_of_two_and_shift(self.granularity) as u32,
+      self.height.align_power_of_two_and_shift(self.granularity) as u32,
+      buf,
+    )
+    .unwrap()
+    .save(data_location.join(file_name).with_extension("png"))
+    .unwrap();
   }
 }
 
