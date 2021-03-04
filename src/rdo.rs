@@ -524,6 +524,22 @@ pub fn distortion_scale<T: Pixel>(
   fi.distortion_scales[y * fi.w_in_imp_b + x]
 }
 
+fn spatiotemporal_scale<T: Pixel>(
+  fi: &FrameInvariants<T>, frame_bo: PlaneBlockOffset, _bsize: BlockSize,
+) -> DistortionScale {
+  if !fi.config.temporal_rdo() && fi.config.tune != Tune::Psychovisual {
+    return DistortionScale::default();
+  }
+
+  let x = frame_bo.0.x >> IMPORTANCE_BLOCK_TO_BLOCK_SHIFT;
+  let y = frame_bo.0.y >> IMPORTANCE_BLOCK_TO_BLOCK_SHIFT;
+
+  DistortionScale::new(
+    f64::from(fi.distortion_scales[y * fi.w_in_imp_b + x])
+      * f64::from(fi.activity_scales[y * fi.w_in_imp_b + x]),
+  )
+}
+
 pub fn distortion_scale_for(
   propagate_cost: f64, intra_cost: f64,
 ) -> DistortionScale {
@@ -817,102 +833,128 @@ fn luma_chroma_mode_rdo<T: Pixel>(
 
   // Find the best chroma prediction mode for the current luma prediction mode
   let mut chroma_rdo = |skip: bool| -> bool {
+    use crate::quantize::ac_q;
     let mut zero_distortion = false;
 
+    let seg_ac_q: ArrayVec<[_; 3]> = (0..=2)
+      .map(|sidx| {
+        ac_q(
+          (fi.base_q_idx as i16
+            + ts.segmentation.data[sidx][SegLvl::SEG_LVL_ALT_Q as usize])
+            .max(0)
+            .min(255) as u8,
+          0,
+          fi.sequence.bit_depth,
+        )
+      })
+      .collect();
+
+    let frame_bo = ts.to_frame_block_offset(tile_bo);
+    let scale = spatiotemporal_scale(&fi, frame_bo, bsize);
+    let scale_sq = scale.0 as u64 * scale.0 as u64;
+
     // If skip is true or segmentation is turned off, sidx is not coded.
-    let sidx_range = if skip || !fi.enable_segmentation {
-      0..=0
+    let sidx = if skip || !fi.enable_segmentation {
+      0
     } else if fi.base_q_idx as i16
       + ts.segmentation.data[2][SegLvl::SEG_LVL_ALT_Q as usize]
       < 1
     {
-      0..=1
+      if seg_ac_q[0] as u64 * scale_sq
+        > ((seg_ac_q[1] as u64) << (2 * DistortionScale::SHIFT))
+      {
+        1
+      } else {
+        0
+      }
     } else {
-      0..=2
+      if seg_ac_q[0] as u64 * scale_sq
+        > ((seg_ac_q[1] as u64) << (2 * DistortionScale::SHIFT))
+      {
+        1
+      } else if seg_ac_q[2] as u64 * scale_sq
+        < ((seg_ac_q[0] as u64) << (2 * DistortionScale::SHIFT))
+      {
+        2
+      } else {
+        0
+      }
     };
 
-    for sidx in sidx_range {
-      cw.bc.blocks.set_segmentation_idx(tile_bo, bsize, sidx);
+    cw.bc.blocks.set_segmentation_idx(tile_bo, bsize, sidx);
 
-      let (tx_size, tx_type) = rdo_tx_size_type(
-        fi, ts, cw, bsize, tile_bo, luma_mode, ref_frames, mvs, skip,
+    let (tx_size, tx_type) = rdo_tx_size_type(
+      fi, ts, cw, bsize, tile_bo, luma_mode, ref_frames, mvs, skip,
+    );
+    for &chroma_mode in mode_set_chroma.iter() {
+      let wr = &mut WriterCounter::new();
+      let tell = wr.tell_frac();
+
+      if bsize >= BlockSize::BLOCK_8X8 && bsize.is_sqr() {
+        cw.write_partition(wr, tile_bo, PartitionType::PARTITION_NONE, bsize);
+      }
+
+      // TODO(yushin): luma and chroma would have different decision based on chroma format
+      let need_recon_pixel =
+        luma_mode_is_intra && tx_size.block_size() != bsize;
+
+      encode_block_pre_cdef(&fi.sequence, ts, cw, wr, bsize, tile_bo, skip);
+      let (has_coeff, tx_dist) = encode_block_post_cdef(
+        fi,
+        ts,
+        cw,
+        wr,
+        luma_mode,
+        chroma_mode,
+        angle_delta,
+        ref_frames,
+        mvs,
+        bsize,
+        tile_bo,
+        skip,
+        CFLParams::default(),
+        tx_size,
+        tx_type,
+        mode_context,
+        mv_stack,
+        rdo_type,
+        need_recon_pixel,
+        false,
       );
-      for &chroma_mode in mode_set_chroma.iter() {
-        let wr = &mut WriterCounter::new();
-        let tell = wr.tell_frac();
 
-        if bsize >= BlockSize::BLOCK_8X8 && bsize.is_sqr() {
-          cw.write_partition(
-            wr,
-            tile_bo,
-            PartitionType::PARTITION_NONE,
-            bsize,
-          );
-        }
-
-        // TODO(yushin): luma and chroma would have different decision based on chroma format
-        let need_recon_pixel =
-          luma_mode_is_intra && tx_size.block_size() != bsize;
-
-        encode_block_pre_cdef(&fi.sequence, ts, cw, wr, bsize, tile_bo, skip);
-        let (has_coeff, tx_dist) = encode_block_post_cdef(
+      let rate = wr.tell_frac() - tell;
+      let distortion = if fi.use_tx_domain_distortion && !need_recon_pixel {
+        compute_tx_distortion(
           fi,
           ts,
-          cw,
-          wr,
-          luma_mode,
-          chroma_mode,
-          angle_delta,
-          ref_frames,
-          mvs,
           bsize,
+          is_chroma_block,
           tile_bo,
+          tx_dist,
           skip,
-          CFLParams::default(),
-          tx_size,
-          tx_type,
-          mode_context,
-          mv_stack,
-          rdo_type,
-          need_recon_pixel,
           false,
-        );
-
-        let rate = wr.tell_frac() - tell;
-        let distortion = if fi.use_tx_domain_distortion && !need_recon_pixel {
-          compute_tx_distortion(
-            fi,
-            ts,
-            bsize,
-            is_chroma_block,
-            tile_bo,
-            tx_dist,
-            skip,
-            false,
-          )
-        } else {
-          compute_distortion(fi, ts, bsize, is_chroma_block, tile_bo, false)
-        };
-        let is_zero_dist = distortion.0 == 0;
-        let rd = compute_rd_cost(fi, rate, distortion);
-        if rd < best.rd_cost {
-          //if rd < best.rd_cost || luma_mode == PredictionMode::NEW_NEWMV {
-          best.rd_cost = rd;
-          best.pred_mode_luma = luma_mode;
-          best.pred_mode_chroma = chroma_mode;
-          best.angle_delta = angle_delta;
-          best.ref_frames = ref_frames;
-          best.mvs = mvs;
-          best.skip = skip;
-          best.has_coeff = has_coeff;
-          best.tx_size = tx_size;
-          best.tx_type = tx_type;
-          best.sidx = sidx;
-          zero_distortion = is_zero_dist;
-        }
-
-        cw.rollback(cw_checkpoint);
+        )
+      } else {
+        compute_distortion(fi, ts, bsize, is_chroma_block, tile_bo, false)
+      };
+      let is_zero_dist = distortion.0 == 0;
+      let rd = compute_rd_cost(fi, rate, distortion);
+      if rd < best.rd_cost {
+        best.rd_cost = rd;
+        best.pred_mode_luma = luma_mode;
+        best.pred_mode_chroma = chroma_mode;
+        best.angle_delta = angle_delta;
+        best.ref_frames = ref_frames;
+        best.mvs = mvs;
+        best.skip = skip;
+        best.has_coeff = has_coeff;
+        best.tx_size = tx_size;
+        best.tx_type = tx_type;
+        best.sidx = sidx;
+        zero_distortion = is_zero_dist;
       }
+
+      cw.rollback(cw_checkpoint);
     }
 
     zero_distortion
