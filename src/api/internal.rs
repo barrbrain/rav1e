@@ -1141,6 +1141,24 @@ impl<T: Pixel> ContextInner<T> {
       .unwrap()
       .save(data_location.join(file_name).with_extension("png"))
       .unwrap();
+      let buf: Vec<_> = plane
+        .iter()
+        .zip(fi.distortion_scales.iter())
+        .map(|(&a, &d)| (f64::from(a) * f64::from(d)).log2())
+        .collect();
+      use kmeans::*;
+      let samples = buf.len();
+      let km = KMeans::new(buf, samples, 1);
+      let result = km.kmeans_lloyd(
+        3,
+        1000,
+        KMeans::init_kmeanplusplus,
+        &KMeansConfig::default(),
+      );
+      let mut centroids: Vec<_> =
+        result.centroids.iter().map(|&v| v.exp2()).collect();
+      centroids.sort_by(|a, b| a.partial_cmp(b).unwrap());
+      println!("\nCentroids: {:?}", centroids);
       fi.activity_mask.dump(data_location, fi.input_frameno);
     }
   }

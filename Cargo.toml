@@ -88,6 +88,7 @@ itertools = "0.10"
 simd_helpers = "0.1"
 wasm-bindgen = { version = "0.2.63", optional = true }
 rust_hawktracer = "0.7.0"
+kmeans = "0.2"
 
 [dependencies.image]
 version = "0.23"
