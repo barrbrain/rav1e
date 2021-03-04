@@ -524,6 +524,31 @@ pub fn distortion_scale<T: Pixel>(
   fi.distortion_scales[y * fi.w_in_imp_b + x]
 }
 
+fn spatiotemporal_scale<T: Pixel>(
+  fi: &FrameInvariants<T>, frame_bo: PlaneBlockOffset, bsize: BlockSize,
+) -> DistortionScale {
+  if !fi.config.temporal_rdo() && fi.config.tune != Tune::Psychovisual {
+    return DistortionScale::default();
+  }
+
+  let x0 = frame_bo.0.x >> IMPORTANCE_BLOCK_TO_BLOCK_SHIFT;
+  let y0 = frame_bo.0.y >> IMPORTANCE_BLOCK_TO_BLOCK_SHIFT;
+  let x1 = (x0 + bsize.width_imp_b()).min(fi.w_in_imp_b);
+  let y1 = (y0 + bsize.height_imp_b()).min(fi.h_in_imp_b);
+  let den = (((x1 - x0) * (y1 - y0)) as u64) << DistortionScale::SHIFT;
+
+  let mut sum = 0;
+  for y in y0..y1 {
+    sum += fi.distortion_scales[y * fi.w_in_imp_b..][x0..x1]
+      .iter()
+      .zip(fi.activity_scales[y * fi.w_in_imp_b..][x0..x1].iter())
+      .take(MAX_SB_IN_IMP_B)
+      .map(|(d, a)| d.0 as u64 * a.0 as u64)
+      .sum::<u64>();
+  }
+  DistortionScale(((sum + (den >> 1)) / den) as u32)
+}
+
 pub fn distortion_scale_for(
   propagate_cost: f64, intra_cost: f64,
 ) -> DistortionScale {
@@ -819,19 +844,44 @@ fn luma_chroma_mode_rdo<T: Pixel>(
   let mut chroma_rdo = |skip: bool| -> bool {
     let mut zero_distortion = false;
 
-    // If skip is true or segmentation is turned off, sidx is not coded.
-    let sidx_range = if skip || !fi.enable_segmentation {
-      0..=0
-    } else if fi.base_q_idx as i16
-      + ts.segmentation.data[2][SegLvl::SEG_LVL_ALT_Q as usize]
-      < 1
-    {
-      0..=1
+    let frame_bo = ts.to_frame_block_offset(tile_bo);
+    let scale = spatiotemporal_scale(fi, frame_bo, bsize);
+
+    // TODO: Replace this calculation with precomputed scale thresholds.
+    let seg_ac_q: ArrayVec<[_; 3]> = if fi.enable_segmentation {
+      use crate::quantize::ac_q;
+      (0..=2)
+        .map(|sidx| {
+          ac_q(
+            (fi.base_q_idx as i16
+              + ts.segmentation.data[sidx][SegLvl::SEG_LVL_ALT_Q as usize])
+              .max(0)
+              .min(255) as u8,
+            0,
+            fi.sequence.bit_depth,
+          )
+        })
+        .collect()
     } else {
-      0..=2
+      Default::default()
     };
 
-    for sidx in sidx_range {
+    // If skip is true or segmentation is turned off, sidx is not coded.
+    let sidx = if skip || !fi.enable_segmentation {
+      0
+    } else if scale.mul_u64(seg_ac_q[1] as u64) < seg_ac_q[0] as u64 {
+      1
+    } else if fi.base_q_idx as i16
+      + ts.segmentation.data[2][SegLvl::SEG_LVL_ALT_Q as usize]
+      >= 1
+      && scale.mul_u64(seg_ac_q[2] as u64) > seg_ac_q[0] as u64
+    {
+      2
+    } else {
+      0
+    };
+
+    {
       cw.bc.blocks.set_segmentation_idx(tile_bo, bsize, sidx);
 
       let (tx_size, tx_type) = rdo_tx_size_type(
