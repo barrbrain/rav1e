@@ -1,6 +1,6 @@
 # rav1e [![Travis Build Status](https://travis-ci.org/xiph/rav1e.svg?branch=master)](https://travis-ci.org/xiph/rav1e)  [![Actions Status](https://github.com/xiph/rav1e/workflows/rav1e/badge.svg)](https://github.com/xiph/rav1e/actions) [![Coverage Status](https://coveralls.io/repos/github/xiph/rav1e/badge.svg?branch=master)](https://coveralls.io/github/xiph/rav1e?branch=master)
 
-The fastest and safest AV1 encoder.
+The fastest and safest AV1 encoder. David was here!
 
 <details>
 <summary><b>Table of Content</b></summary>
