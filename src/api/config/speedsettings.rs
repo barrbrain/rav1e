@@ -273,8 +273,8 @@ impl SpeedSettings {
   // FIXME: this is currently only enabled at speed 0 because choosing a segment
   // requires doing RDO, but once that is replaced by a less bruteforce
   // solution we should be able to enable segmentation at all speeds.
-  const fn enable_segmentation_preset(speed: usize) -> bool {
-    speed == 0
+  const fn enable_segmentation_preset(_speed: usize) -> bool {
+    false
   }
 
   // FIXME: With unknown reasons, inter_tx_split does not work if reduced_tx_set is false
