@@ -846,6 +846,8 @@ fn luma_chroma_mode_rdo<T: Pixel>(
 
     let frame_bo = ts.to_frame_block_offset(tile_bo);
     let scale = spatiotemporal_scale(fi, frame_bo, bsize);
+    let scale =
+      DistortionScale((scale.0 as f64 * fi.dist_scale[0] + 0.5) as u32);
 
     // TODO: Replace this calculation with precomputed scale thresholds.
     let seg_ac_q: ArrayVec<[_; 3]> = if fi.enable_segmentation {
