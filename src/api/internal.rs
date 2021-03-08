@@ -1176,8 +1176,13 @@ impl<T: Pixel> ContextInner<T> {
           frame_data.fi.sequence.bit_depth,
           &mut frame_data.fi.activity_scales,
         );
-        frame_data.fi.mean_spatiotemporal_scale =
+        let mean =
           mean_spatiotemporal_scale(&frame_data.fi);
+        frame_data.fi.mean_spatiotemporal_scale = mean;
+        let inv_mean = 1. / f64::from(mean);
+        frame_data.fi.dist_scale[0] *= inv_mean;
+        frame_data.fi.dist_scale[1] *= inv_mean;
+        frame_data.fi.dist_scale[2] *= inv_mean;
       } else {
         frame_data.fi.activity_mask = ActivityMask::default();
       }
