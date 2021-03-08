@@ -608,6 +608,8 @@ pub struct FrameInvariants<T: Pixel> {
   pub distortion_scales: Box<[DistortionScale]>,
   /// Pre-computed activity_scale.
   pub activity_scales: Box<[DistortionScale]>,
+  /// Mean spatiotemporal scale.
+  pub mean_spatiotemporal_scale: DistortionScale,
 
   /// Target CPU feature level.
   pub cpu_feature_level: crate::cpu_features::CpuFeatureLevel,
@@ -754,6 +756,7 @@ impl<T: Pixel> FrameInvariants<T> {
         w_in_imp_b * h_in_imp_b
       ]
       .into_boxed_slice(),
+      mean_spatiotemporal_scale: Default::default(),
       cpu_feature_level: Default::default(),
       activity_mask: Default::default(),
       enable_segmentation: config.speed_settings.segmentation

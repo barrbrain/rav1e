@@ -1166,6 +1166,8 @@ impl<T: Pixel> ContextInner<T> {
       frame_data.fi.set_quantizers(&qps);
 
       if self.config.tune == Tune::Psychovisual {
+        use crate::rdo::mean_spatiotemporal_scale;
+
         let frame =
           self.frame_q[&frame_data.fi.input_frameno].as_ref().unwrap();
         frame_data.fi.activity_mask =
@@ -1174,6 +1176,8 @@ impl<T: Pixel> ContextInner<T> {
           frame_data.fi.sequence.bit_depth,
           &mut frame_data.fi.activity_scales,
         );
+        frame_data.fi.mean_spatiotemporal_scale =
+          mean_spatiotemporal_scale(&frame_data.fi);
       } else {
         frame_data.fi.activity_mask = ActivityMask::default();
       }
