@@ -535,7 +535,8 @@ pub fn spatiotemporal_scale<T: Pixel>(
   let y0 = frame_bo.0.y >> IMPORTANCE_BLOCK_TO_BLOCK_SHIFT;
   let x1 = (x0 + bsize.width_imp_b()).min(fi.w_in_imp_b);
   let y1 = (y0 + bsize.height_imp_b()).min(fi.h_in_imp_b);
-  let den = (((x1 - x0) * (y1 - y0)) as u64) << DistortionScale::SHIFT;
+  let den =
+    (((x1 - x0) * (y1 - y0)) as u64) * fi.mean_spatiotemporal_scale.0 as u64;
 
   let mut sum = 0;
   for y in y0..y1 {
@@ -546,6 +547,37 @@ pub fn spatiotemporal_scale<T: Pixel>(
       .map(|(d, a)| d.0 as u64 * a.0 as u64)
       .sum::<u64>();
   }
+  DistortionScale(((sum + (den >> 1)) / den) as u32)
+}
+
+pub fn mean_spatiotemporal_scale<T: Pixel>(
+  fi: &FrameInvariants<T>,
+) -> DistortionScale {
+  if !fi.config.temporal_rdo() && fi.config.tune != Tune::Psychovisual {
+    return DistortionScale::default();
+  }
+
+  // min(64 - 2 * DistortionScale::BITS, DistortionScale::SHIFT)
+  const CHUNK_LOG2: usize = DistortionScale::SHIFT as usize;
+  const CHUNK: usize = 1 << CHUNK_LOG2;
+  let den = fi.activity_scales.len() as u64;
+  // << (DistortionScale::SHIFT as usize - CHUNK_LOG2);
+
+  let sum = fi
+    .distortion_scales
+    .chunks(CHUNK)
+    .zip(fi.activity_scales.chunks(CHUNK))
+    .map(|(distortion_chunk, activity_chunk)| {
+      (distortion_chunk
+        .iter()
+        .zip(activity_chunk.iter())
+        .map(|(d, a)| d.0 as u64 * a.0 as u64)
+        .sum::<u64>()
+        + ((CHUNK as u64) >> 1))
+        >> CHUNK_LOG2
+    })
+    .sum::<u64>();
+
   DistortionScale(((sum + (den >> 1)) / den) as u32)
 }
 
