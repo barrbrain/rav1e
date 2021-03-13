@@ -1187,6 +1187,39 @@ impl<T: Pixel> ContextInner<T> {
         frame_data.fi.activity_mask = ActivityMask::default();
       }
 
+      let apply_qidx_diff = {
+        let mean_log_scales_q24: i32 = {
+          let num_scales = frame_data.fi.distortion_scales.len() as i64;
+          ((frame_data
+            .fi
+            .distortion_scales
+            .iter()
+            .zip(frame_data.fi.activity_scales.iter())
+            .map(|(&d, &a)| d.mul_blog_q24(a) as i64)
+            .sum::<i64>()
+            + (num_scales >> 1))
+            / num_scales) as i32
+        };
+        let bit_depth = frame_data.fi.sequence.bit_depth;
+        move |base_q_idx: &mut u8| {
+          use crate::quantize::{ac_q, select_ac_qi};
+          use crate::rate::{bexp64, blog64, q24_to_q57};
+          let log_ac_q_q57 = blog64(ac_q(*base_q_idx, 0, bit_depth) as i64);
+          let log_scale = mean_log_scales_q24;
+          // Rewrite in log form and exponentiate:
+          //   scale Q'^2 = Q^2
+          //           Q' = Q / sqrt(scale)
+          //      log(Q') = log(Q) - 0.5 log(scale)
+          let q = bexp64(log_ac_q_q57 - (q24_to_q57(log_scale) >> 1));
+          // Find the index of the nearest quantizer to the target,
+          // and take the delta from the base quantizer index.
+          // Avoid going into lossless mode by never bringing qidx below 1.
+          *base_q_idx = select_ac_qi(q, bit_depth).max(1);
+        }
+      };
+
+      apply_qidx_diff(&mut frame_data.fi.base_q_idx);
+
       if self.rc_state.needs_trial_encode(fti) {
         let mut trial_fs = frame_data.fs.clone();
         let data =
@@ -1206,6 +1239,7 @@ impl<T: Pixel> ContextInner<T> {
           self.maybe_prev_log_base_q,
         );
         frame_data.fi.set_quantizers(&qps);
+        apply_qidx_diff(&mut frame_data.fi.base_q_idx);
       }
 
       let data =
