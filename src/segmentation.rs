@@ -8,6 +8,7 @@
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
 use crate::context::*;
+use crate::header::PRIMARY_REF_NONE;
 use crate::partition::BlockSize;
 use crate::quantize::{ac_q, select_ac_qi};
 use crate::rdo::DistortionScale;
@@ -25,13 +26,6 @@ pub fn segmentation_optimize<T: Pixel>(
 
   if fs.segmentation.enabled {
     fs.segmentation.update_map = true;
-
-    // Update the values on every frame, as they vary by frame type.
-    fs.segmentation.update_data = true;
-
-    if !fs.segmentation.update_data {
-      return;
-    }
 
     // Select target quantizers for each segment by fitting to log(scale).
     let mut log_scales_q24 = fi
@@ -63,11 +57,34 @@ pub fn segmentation_optimize<T: Pixel>(
         })
         .collect()
     };
-    // Update the base quantizer index to match the central quantizer
-    // and take the deltas from this base quantizer index.
+    // Update the base quantizer index to match the central quantizer.
+    let original_base_q_idx = fi.base_q_idx;
     fi.base_q_idx = qidx[1];
-    let qidx_diffs: ArrayVec<[_; 3]> =
-      qidx.iter().map(|&qidx| qidx as i16 - fi.base_q_idx as i16).collect();
+
+    // We don't change the values between frames.
+    fs.segmentation.update_data = fi.primary_ref_frame == PRIMARY_REF_NONE;
+
+    let qidx_diffs: ArrayVec<[_; 3]> = if fs.segmentation.update_data {
+      // Take the deltas from this base quantizer index.
+      qidx.iter().map(|&qidx| qidx as i16 - fi.base_q_idx as i16).collect()
+    } else {
+      (0..3)
+        .map(|i| fs.segmentation.data[i][SegLvl::SEG_LVL_ALT_Q as usize])
+        .collect()
+    };
+
+    // Recompute the centroids from the actual quantizer values.
+    let centroids_q24: ArrayVec<[_; 3]> = {
+      use crate::rate::{blog64, q57_to_q24};
+      let log_ac_q_q57 =
+        blog64(ac_q(original_base_q_idx, 0, fi.sequence.bit_depth) as i64);
+      qidx_diffs
+        .iter()
+        .map(|&delta| (fi.base_q_idx as i16 + delta).max(0).min(255) as u8)
+        .map(|qidx| blog64(ac_q(qidx, 0, fi.sequence.bit_depth) as i64))
+        .map(|log_q_q57| q57_to_q24((log_ac_q_q57 - log_q_q57) << 1))
+        .collect()
+    };
     // Precompute the midpoints between selected centroids, in log(scale) form.
     let thresholds: ArrayVec<[_; 2]> = centroids_q24
       .iter()
@@ -77,11 +94,16 @@ pub fn segmentation_optimize<T: Pixel>(
       .map(DistortionScale::bexp_q24)
       .collect();
 
+    fs.segmentation.thresholds.copy_from_slice(&thresholds);
+
+    if !fs.segmentation.update_data {
+      return;
+    }
+
     for (i, &alt_q) in qidx_diffs.iter().enumerate() {
       fs.segmentation.features[i][SegLvl::SEG_LVL_ALT_Q as usize] = true;
       fs.segmentation.data[i][SegLvl::SEG_LVL_ALT_Q as usize] = alt_q;
     }
-    fs.segmentation.thresholds.copy_from_slice(&thresholds);
 
     /* Figure out parameters */
     fs.segmentation.preskip = false;
