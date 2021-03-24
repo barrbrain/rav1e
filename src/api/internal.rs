@@ -1181,7 +1181,7 @@ impl<T: Pixel> ContextInner<T> {
       if self.rc_state.needs_trial_encode(fti) {
         let mut trial_fs = frame_data.fs.clone();
         let data =
-          encode_frame(&frame_data.fi, &mut trial_fs, &self.inter_cfg);
+          encode_frame(&mut frame_data.fi, &mut trial_fs, &self.inter_cfg);
         self.rc_state.update_state(
           (data.len() * 8) as i64,
           fti,
@@ -1200,7 +1200,7 @@ impl<T: Pixel> ContextInner<T> {
       }
 
       let data =
-        encode_frame(&frame_data.fi, &mut frame_data.fs, &self.inter_cfg);
+        encode_frame(&mut frame_data.fi, &mut frame_data.fs, &self.inter_cfg);
       let enc_stats = frame_data.fs.enc_stats.clone();
       self.maybe_prev_log_base_q = Some(qps.log_base_q);
       // TODO: Add support for dropping frames.

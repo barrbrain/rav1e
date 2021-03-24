@@ -18,7 +18,7 @@ use crate::FrameState;
 use arrayvec::ArrayVec;
 
 pub fn segmentation_optimize<T: Pixel>(
-  fi: &FrameInvariants<T>, fs: &mut FrameState<T>,
+  fi: &mut FrameInvariants<T>, fs: &mut FrameState<T>,
 ) {
   assert!(fi.enable_segmentation);
   fs.segmentation.enabled = true;
@@ -45,7 +45,7 @@ pub fn segmentation_optimize<T: Pixel>(
     // For the selected centroids, derive a target quantizer:
     //   scale Q'^2 = Q^2
     // See `distortion_scale_for` for more information.
-    let qidx_diffs: ArrayVec<[_; 3]> = {
+    let qidx: ArrayVec<[_; 3]> = {
       use crate::rate::{bexp64, blog64, q24_to_q57};
       let log_ac_q_q57 =
         blog64(ac_q(fi.base_q_idx, 0, fi.sequence.bit_depth) as i64);
@@ -56,15 +56,18 @@ pub fn segmentation_optimize<T: Pixel>(
         //           Q' = Q / sqrt(scale)
         //      log(Q') = log(Q) - 0.5 log(scale)
         .map(|&c| bexp64(log_ac_q_q57 - (q24_to_q57(c) >> 1)))
-        // Find the index of the nearest quantizer to the target,
-        // and take the delta from the base quantizer index.
+        // Find the index of the nearest quantizer to the target.
         .map(|q| {
           // Avoid going into lossless mode by never bringing qidx below 1.
-          select_ac_qi(q, fi.sequence.bit_depth).max(1) as i16
-            - fi.base_q_idx as i16
+          select_ac_qi(q, fi.sequence.bit_depth).max(1) as u8
         })
         .collect()
     };
+    // Update the base quantizer index to match the central quantizer
+    // and take the deltas from this base quantizer index.
+    fi.base_q_idx = qidx[1];
+    let qidx_diffs: ArrayVec<[_; 3]> =
+      qidx.iter().map(|&qidx| qidx as i16 - fi.base_q_idx as i16).collect();
     // Precompute the midpoints between selected centroids, in log(scale) form.
     let thresholds: ArrayVec<[_; 2]> = centroids_q24
       .iter()

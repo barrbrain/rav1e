@@ -3477,7 +3477,7 @@ fn get_initial_segmentation<T: Pixel>(
 }
 
 pub fn encode_frame<T: Pixel>(
-  fi: &FrameInvariants<T>, fs: &mut FrameState<T>, inter_cfg: &InterConfig,
+  fi: &mut FrameInvariants<T>, fs: &mut FrameState<T>, inter_cfg: &InterConfig,
 ) -> Vec<u8> {
   debug_assert!(!fi.show_existing_frame);
   debug_assert!(!fi.invalid);
