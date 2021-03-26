@@ -116,54 +116,43 @@ impl<T: Pixel> SceneChangeDetector<T> {
       return false;
     }
 
-    let keyframe_check = self.is_key_frame(
+    // Set our scenecut method
+    let result = if self.fast_mode {
+      self.fast_scenecut(
       frame_set[0].clone(),
       frame_set[1].clone(),
       input_frameno,
       previous_keyframe,
-    );
-    keyframe_check
-  }
-
-  /// Determines if `current_frame` should be a keyframe.
-  fn is_key_frame(
-    &self, previous_frame: Arc<Frame<T>>, current_frame: Arc<Frame<T>>,
-    current_frameno: u64, previous_keyframe: u64,
-  ) -> bool {
-    let result = self.has_scenecut(
-      previous_frame,
-      current_frame,
-      current_frameno,
+      )
+    } else {
+      self.cost_scenecut(
+        frame_set[0].clone(),
+        frame_set[1].clone(),
+        input_frameno,
       previous_keyframe,
-    );
+      )
+    };
+
     debug!(
       "[SC-Detect] Frame {}: T={:.1} P={:.1} {}",
-      current_frameno,
+      input_frameno,
       result.threshold,
       result.inter_cost,
       if result.has_scenecut { "Scenecut" } else { "No cut" }
     );
-    result.has_scenecut
+    let keyframe_check = result.has_scenecut;
+    keyframe_check
   }
 
-  /// Run a comparison between two frames to determine if they qualify for a scenecut.
-  ///
-  /// The standard algorithm uses block intra and inter costs
-  /// to determine which method would be more efficient
-  /// for coding this frame.
-  ///
   /// The fast algorithm detects fast cuts using a raw difference
   /// in pixel values between the scaled frames.
-  fn has_scenecut(
+  fn fast_scenecut(
     &self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>, frameno: u64,
     previous_keyframe: u64,
   ) -> ScenecutResult {
-    if self.fast_mode {
       // Downscaling both frames for comparison
-      let frame1_scaled =
-        frame1.planes[0].clone().downscale(self.scale_factor);
-      let frame2_scaled =
-        frame2.planes[0].clone().downscale(self.scale_factor);
+    let frame1_scaled = frame1.planes[0].clone().downscale(self.scale_factor);
+    let frame2_scaled = frame2.planes[0].clone().downscale(self.scale_factor);
 
       let delta = self.delta_in_planes(&frame1_scaled, &frame2_scaled);
       let threshold = self.threshold;
@@ -173,7 +162,17 @@ impl<T: Pixel> SceneChangeDetector<T> {
         inter_cost: delta as f64,
         has_scenecut: delta >= threshold as f64,
       }
-    } else {
+  }
+
+  /// Run a comparison between two frames to determine if they qualify for a scenecut.
+  ///
+  /// Using block intra and inter costs
+  /// to determine which method would be more efficient
+  /// for coding this frame.
+  fn cost_scenecut(
+    &self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>, frameno: u64,
+    previous_keyframe: u64,
+  ) -> ScenecutResult {
       let frame2_ref2 = Arc::clone(&frame2);
       let (intra_cost, inter_cost) = crate::rayon::join(
         move || {
@@ -232,7 +231,6 @@ impl<T: Pixel> SceneChangeDetector<T> {
         has_scenecut: inter_cost > threshold,
       }
     }
-  }
 
   /// Calculates delta beetween 2 planes
   /// returns average for pixel
