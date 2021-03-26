@@ -114,16 +114,13 @@ impl SceneChangeDetector {
       return false;
     }
 
-    if self.exclude_scene_flashes {
-      self.exclude_scene_flashes(frame_set, input_frameno, previous_keyframe);
-    }
-
-    self.is_key_frame(
+    let keyframe_check = self.is_key_frame(
       frame_set[0].clone(),
       frame_set[1].clone(),
       input_frameno,
       previous_keyframe,
-    )
+    );
+    keyframe_check
   }
 
   /// Determines if `current_frame` should be a keyframe.
@@ -131,10 +128,6 @@ impl SceneChangeDetector {
     &self, previous_frame: Arc<Frame<T>>, current_frame: Arc<Frame<T>>,
     current_frameno: u64, previous_keyframe: u64,
   ) -> bool {
-    if self.excluded_frames.contains(&current_frameno) {
-      return false;
-    }
-
     let result = self.has_scenecut(
       previous_frame,
       current_frame,
@@ -142,96 +135,13 @@ impl SceneChangeDetector {
       previous_keyframe,
     );
     debug!(
-      "[SC-Detect] Frame {} to {}: I={:.3} T={:.3} P={:.3} {}",
-      current_frameno - 1,
+      "[SC-Detect] Frame {}: T={} P={:.1} {}",
       current_frameno,
-      result.intra_cost,
       result.threshold,
       result.inter_cost,
       if result.has_scenecut { "Scenecut" } else { "No cut" }
     );
     result.has_scenecut
-  }
-
-  /// Uses lookahead to avoid coding short flashes as scenecuts.
-  /// Saves excluded frame numbers in `self.excluded_frames`.
-  fn exclude_scene_flashes<T: Pixel>(
-    &mut self, frame_subset: &[Arc<Frame<T>>], frameno: u64,
-    previous_keyframe: u64,
-  ) {
-    let lookahead_distance = self.lookahead_distance;
-
-    if frame_subset.len() - 1 < lookahead_distance {
-      // Don't add a keyframe in the last frame pyramid.
-      // It's effectively the same as a scene flash,
-      // and really wasteful for compression.
-      for frame in frameno..=(frameno + lookahead_distance as u64) {
-        self.excluded_frames.insert(frame);
-      }
-      return;
-    }
-
-    // Where A and B are scenes: AAAAAABBBAAAAAA
-    // If BBB is shorter than lookahead_distance, it is detected as a flash
-    // and not considered a scenecut.
-    //
-    // Search starting with the furthest frame,
-    // to enable early loop exit if we find a scene flash.
-    for j in (1..=lookahead_distance).rev() {
-      let result = self.has_scenecut(
-        frame_subset[0].clone(),
-        frame_subset[j].clone(),
-        frameno - 1 + j as u64,
-        previous_keyframe,
-      );
-      debug!(
-        "[SF-Detect-1] Frame {} to {}: I={:.3} T={:.3} P={:.3} {}",
-        frameno - 1,
-        frameno - 1 + j as u64,
-        result.intra_cost,
-        result.threshold,
-        result.inter_cost,
-        if result.has_scenecut { "No flash" } else { "Scene flash" }
-      );
-      if !result.has_scenecut {
-        // Any frame in between `0` and `j` cannot be a real scenecut.
-        for i in 0..=j {
-          let frameno = frameno + i as u64 - 1;
-          self.excluded_frames.insert(frameno);
-        }
-        // Because all frames in this gap are already excluded,
-        // exit the loop early as an optimization.
-        break;
-      }
-    }
-
-    // Where A-F are scenes: AAAAABBCCDDEEFFFFFF
-    // If each of BB ... EE are shorter than `lookahead_distance`, they are
-    // detected as flashes and not considered scenecuts.
-    // Instead, the first F frame becomes a scenecut.
-    // If the video ends before F, no frame becomes a scenecut.
-    for i in 1..lookahead_distance {
-      let result = self.has_scenecut(
-        frame_subset[i].clone(),
-        frame_subset[lookahead_distance].clone(),
-        frameno - 1 + lookahead_distance as u64,
-        previous_keyframe,
-      );
-      debug!(
-        "[SF-Detect-2] Frame {} to {}: I={:.3} T={:.3} P={:.3} {}",
-        frameno - 1 + i as u64,
-        frameno - 1 + lookahead_distance as u64,
-        result.intra_cost,
-        result.threshold,
-        result.inter_cost,
-        if result.has_scenecut { "Scene flash" } else { "No flash" }
-      );
-      if result.has_scenecut {
-        // If the current frame is the frame before a scenecut, it cannot also be the frame of a scenecut.
-        let frameno = frameno + i as u64 - 1;
-        self.excluded_frames.insert(frameno);
-      }
-    }
   }
 
   /// Run a comparison between two frames to determine if they qualify for a scenecut.
