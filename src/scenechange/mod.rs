@@ -118,17 +118,17 @@ impl<T: Pixel> SceneChangeDetector<T> {
     // Set our scenecut method
     let result = if self.fast_mode {
       self.fast_scenecut(
-      frame_set[0].clone(),
-      frame_set[1].clone(),
-      input_frameno,
-      previous_keyframe,
+        frame_set[0].clone(),
+        frame_set[1].clone(),
+        input_frameno,
+        previous_keyframe,
       )
     } else {
       self.cost_scenecut(
         frame_set[0].clone(),
         frame_set[1].clone(),
         input_frameno,
-      previous_keyframe,
+        previous_keyframe,
       )
     };
 
@@ -149,18 +149,18 @@ impl<T: Pixel> SceneChangeDetector<T> {
     &self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>, frameno: u64,
     previous_keyframe: u64,
   ) -> ScenecutResult {
-      // Downscaling both frames for comparison
+    // Downscaling both frames for comparison
     let frame1_scaled = frame1.planes[0].clone().downscale(self.scale_factor);
     let frame2_scaled = frame2.planes[0].clone().downscale(self.scale_factor);
 
-      let delta = self.delta_in_planes(&frame1_scaled, &frame2_scaled);
-      let threshold = self.threshold;
-      ScenecutResult {
-        intra_cost: threshold as f64,
-        threshold: threshold as f64,
-        inter_cost: delta as f64,
-        has_scenecut: delta >= threshold as f64,
-      }
+    let delta = self.delta_in_planes(&frame1_scaled, &frame2_scaled);
+    let threshold = self.threshold;
+    ScenecutResult {
+      intra_cost: threshold as f64,
+      threshold: threshold as f64,
+      inter_cost: delta as f64,
+      has_scenecut: delta >= threshold as f64,
+    }
   }
 
   /// Run a comparison between two frames to determine if they qualify for a scenecut.
@@ -172,64 +172,64 @@ impl<T: Pixel> SceneChangeDetector<T> {
     &self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>, frameno: u64,
     previous_keyframe: u64,
   ) -> ScenecutResult {
-      let frame2_ref2 = Arc::clone(&frame2);
-      let (intra_cost, inter_cost) = crate::rayon::join(
-        move || {
-          let intra_costs = estimate_intra_costs(
-            &*frame2,
-            self.bit_depth,
-            self.cpu_feature_level,
-          );
-          intra_costs.iter().map(|&cost| cost as u64).sum::<u64>() as f64
-            / intra_costs.len() as f64
-        },
-        move || {
-          let inter_costs = estimate_inter_costs(
-            frame2_ref2,
-            frame1,
-            self.bit_depth,
-            self.encoder_config,
-            self.sequence.clone(),
-          );
-          inter_costs.iter().map(|&cost| cost as u64).sum::<u64>() as f64
-            / inter_costs.len() as f64
-        },
-      );
+    let frame2_ref2 = Arc::clone(&frame2);
+    let (intra_cost, inter_cost) = crate::rayon::join(
+      move || {
+        let intra_costs = estimate_intra_costs(
+          &*frame2,
+          self.bit_depth,
+          self.cpu_feature_level,
+        );
+        intra_costs.iter().map(|&cost| cost as u64).sum::<u64>() as f64
+          / intra_costs.len() as f64
+      },
+      move || {
+        let inter_costs = estimate_inter_costs(
+          frame2_ref2,
+          frame1,
+          self.bit_depth,
+          self.encoder_config,
+          self.sequence.clone(),
+        );
+        inter_costs.iter().map(|&cost| cost as u64).sum::<u64>() as f64
+          / inter_costs.len() as f64
+      },
+    );
 
-      // Sliding scale, more likely to choose a keyframe
-      // as we get farther from the last keyframe.
-      // Based on x264 scenecut code.
-      //
-      // `THRESH_MAX` determines how likely we are
-      // to choose a keyframe, between 0.0-1.0.
-      // Higher values mean we are more likely to choose a keyframe.
-      // `0.4` was chosen based on trials of the `scenecut-720p` set in AWCY,
-      // as it appeared to provide the best average compression.
-      // This also matches the default scenecut threshold in x264.
-      const THRESH_MAX: f64 = 0.4;
-      const THRESH_MIN: f64 = THRESH_MAX * 0.25;
-      let distance_from_keyframe = frameno - previous_keyframe;
-      let min_keyint = self.encoder_config.min_key_frame_interval;
-      let max_keyint = self.encoder_config.max_key_frame_interval;
-      let bias = if distance_from_keyframe <= min_keyint / 4 {
-        THRESH_MIN / 4.0
-      } else if distance_from_keyframe <= min_keyint {
-        THRESH_MIN * distance_from_keyframe as f64 / min_keyint as f64
-      } else {
-        THRESH_MIN
-          + (THRESH_MAX - THRESH_MIN)
-            * (distance_from_keyframe - min_keyint) as f64
-            / (max_keyint - min_keyint) as f64
-      };
-      let threshold = intra_cost * (1.0 - bias);
+    // Sliding scale, more likely to choose a keyframe
+    // as we get farther from the last keyframe.
+    // Based on x264 scenecut code.
+    //
+    // `THRESH_MAX` determines how likely we are
+    // to choose a keyframe, between 0.0-1.0.
+    // Higher values mean we are more likely to choose a keyframe.
+    // `0.4` was chosen based on trials of the `scenecut-720p` set in AWCY,
+    // as it appeared to provide the best average compression.
+    // This also matches the default scenecut threshold in x264.
+    const THRESH_MAX: f64 = 0.4;
+    const THRESH_MIN: f64 = THRESH_MAX * 0.25;
+    let distance_from_keyframe = frameno - previous_keyframe;
+    let min_keyint = self.encoder_config.min_key_frame_interval;
+    let max_keyint = self.encoder_config.max_key_frame_interval;
+    let bias = if distance_from_keyframe <= min_keyint / 4 {
+      THRESH_MIN / 4.0
+    } else if distance_from_keyframe <= min_keyint {
+      THRESH_MIN * distance_from_keyframe as f64 / min_keyint as f64
+    } else {
+      THRESH_MIN
+        + (THRESH_MAX - THRESH_MIN)
+          * (distance_from_keyframe - min_keyint) as f64
+          / (max_keyint - min_keyint) as f64
+    };
+    let threshold = intra_cost * (1.0 - bias);
 
-      ScenecutResult {
-        intra_cost,
-        threshold,
-        inter_cost,
-        has_scenecut: inter_cost > threshold,
-      }
+    ScenecutResult {
+      intra_cost,
+      threshold,
+      inter_cost,
+      has_scenecut: inter_cost > threshold,
     }
+  }
 
   /// Calculates delta beetween 2 planes
   /// returns average for pixel
