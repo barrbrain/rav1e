@@ -140,6 +140,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
 
   /// The fast algorithm detects fast cuts using a raw difference
   /// in pixel values between the scaled frames.
+  #[hawktracer(fast_scenecut)]
   fn fast_scenecut(
     &mut self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>,
   ) -> ScenecutResult {
@@ -172,6 +173,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
   /// Using block intra and inter costs
   /// to determine which method would be more efficient
   /// for coding this frame.
+  #[hawktracer(cost_scenecut)]
   fn cost_scenecut(
     &self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>, frameno: u64,
     previous_keyframe: u64,
@@ -237,6 +239,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
 
   /// Calculates delta beetween 2 planes
   /// returns average for pixel
+  #[hawktracer(delta_in_planes)]
   fn delta_in_planes(&self, plane1: &Plane<T>, plane2: &Plane<T>) -> f64 {
     let mut delta = 0;
 
