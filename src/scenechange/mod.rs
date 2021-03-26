@@ -43,7 +43,6 @@ impl<T: Pixel> SceneChangeDetector<T> {
   pub fn new(
     encoder_config: EncoderConfig, cpu_feature_level: CpuFeatureLevel,
     lookahead_distance: usize, sequence: Arc<Sequence>,
-    exclude_scene_flashes: bool,
   ) -> Self {
     // This implementation is based on a Python implementation at
     // https://pyscenedetect.readthedocs.io/en/latest/reference/detection-methods/.

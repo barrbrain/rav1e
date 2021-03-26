@@ -291,7 +291,6 @@ impl<T: Pixel> ContextInner<T> {
         CpuFeatureLevel::default(),
         lookahead_distance,
         seq.clone(),
-        true,
       ),
       config: Arc::new(*enc),
       seq,
