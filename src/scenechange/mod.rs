@@ -54,14 +54,28 @@ impl SceneChangeDetector {
     // This may be adjusted later.
     //
     // This threshold is only used for the fast scenecut implementation.
-    const BASE_THRESHOLD: u64 = 12;
+    const BASE_THRESHOLD: usize = 12;
     let bit_depth = encoder_config.bit_depth;
     let fast_mode = encoder_config.speed_settings.fast_scene_detection
       || encoder_config.low_latency;
 
+    // Scale factor for fast scene detection
+    let scale_factor =
+      if fast_mode { detect_scale_factor(&sequence) } else { 1 as usize };
+
+    // Pixel count for fast scenedetect
+    let pixels = if fast_mode {
+      (sequence.max_frame_height as usize / scale_factor)
+        * (sequence.max_frame_width as usize / scale_factor)
+    } else {
+      1
+    };
+
     Self {
-      threshold: BASE_THRESHOLD * bit_depth as u64 / 8,
+      threshold: BASE_THRESHOLD * bit_depth / 8,
       fast_mode,
+      scale_factor,
+      pixels,
       exclude_scene_flashes,
       excluded_frames: BTreeSet::new(),
       bit_depth,
