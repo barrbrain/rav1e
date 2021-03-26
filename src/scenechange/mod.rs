@@ -140,7 +140,7 @@ impl SceneChangeDetector {
       previous_keyframe,
     );
     debug!(
-      "[SC-Detect] Frame {}: T={} P={:.1} {}",
+      "[SC-Detect] Frame {}: T={:.1} P={:.1} {}",
       current_frameno,
       result.threshold,
       result.inter_cost,
