@@ -28,11 +28,6 @@ pub struct SceneChangeDetector {
   scale_factor: usize,
   /// Number of pixels in scaled frame for fast mode
   pixels: usize,
-  /// Determine whether or not short scene flashes should be excluded
-  exclude_scene_flashes: bool,
-  /// Frames that cannot be marked as keyframes due to the algorithm excluding them.
-  /// Storing the frame numbers allows us to avoid looking back more than one frame.
-  excluded_frames: BTreeSet<u64>,
   /// The bit depth of the video.
   bit_depth: usize,
   /// The CPU feature level to be used.
@@ -81,8 +76,6 @@ impl SceneChangeDetector {
       fast_mode,
       scale_factor,
       pixels,
-      exclude_scene_flashes,
-      excluded_frames: BTreeSet::new(),
       bit_depth,
       cpu_feature_level,
       encoder_config,
