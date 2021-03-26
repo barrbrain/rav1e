@@ -19,13 +19,15 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 /// Runs keyframe detection on frames from the lookahead queue.
-pub struct SceneChangeDetector {
+pub struct SceneChangeDetector<T: Pixel> {
   /// Minimum average difference between YUV deltas that will trigger a scene change.
   threshold: usize,
   /// Fast scene cut detection mode, uses simple SAD instead of encoder cost estimates.
   fast_mode: bool,
   /// scaling factor for fast scene detection
   scale_factor: usize,
+  // Frame buffer for scaled frames
+  frame_buffer: Vec<Plane<T>>,
   /// Number of pixels in scaled frame for fast mode
   pixels: usize,
   /// The bit depth of the video.
@@ -37,7 +39,7 @@ pub struct SceneChangeDetector {
   sequence: Arc<Sequence>,
 }
 
-impl SceneChangeDetector {
+impl<T: Pixel> SceneChangeDetector<T> {
   pub fn new(
     encoder_config: EncoderConfig, cpu_feature_level: CpuFeatureLevel,
     lookahead_distance: usize, sequence: Arc<Sequence>,
@@ -71,10 +73,13 @@ impl SceneChangeDetector {
       1
     };
 
+    let frame_buffer = Vec::new();
+
     Self {
       threshold: BASE_THRESHOLD * bit_depth / 8,
       fast_mode,
       scale_factor,
+      frame_buffer,
       pixels,
       bit_depth,
       cpu_feature_level,
@@ -93,7 +98,7 @@ impl SceneChangeDetector {
   ///
   /// This will gracefully handle the first frame in the video as well.
   #[hawktracer(analyze_next_frame)]
-  pub fn analyze_next_frame<T: Pixel>(
+  pub fn analyze_next_frame(
     &mut self, frame_set: &[Arc<Frame<T>>], input_frameno: u64,
     previous_keyframe: u64,
   ) -> bool {
@@ -122,7 +127,7 @@ impl SceneChangeDetector {
   }
 
   /// Determines if `current_frame` should be a keyframe.
-  fn is_key_frame<T: Pixel>(
+  fn is_key_frame(
     &self, previous_frame: Arc<Frame<T>>, current_frame: Arc<Frame<T>>,
     current_frameno: u64, previous_keyframe: u64,
   ) -> bool {
@@ -150,7 +155,7 @@ impl SceneChangeDetector {
   ///
   /// The fast algorithm detects fast cuts using a raw difference
   /// in pixel values between the scaled frames.
-  fn has_scenecut<T: Pixel>(
+  fn has_scenecut(
     &self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>, frameno: u64,
     previous_keyframe: u64,
   ) -> ScenecutResult {
@@ -232,9 +237,7 @@ impl SceneChangeDetector {
 
   /// Calculates delta beetween 2 planes
   /// returns average for pixel
-  fn delta_in_planes<T: Pixel>(
-    &self, plane1: &Plane<T>, plane2: &Plane<T>,
-  ) -> f64 {
+  fn delta_in_planes(&self, plane1: &Plane<T>, plane2: &Plane<T>) -> f64 {
     let mut delta = 0;
 
     let lines = plane1.rows_iter().zip(plane2.rows_iter());
