@@ -14,15 +14,20 @@ use crate::encoder::Sequence;
 use crate::frame::*;
 use crate::util::{CastFromPrimitive, Pixel};
 use rust_hawktracer::*;
+use std::cmp;
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
 /// Runs keyframe detection on frames from the lookahead queue.
 pub struct SceneChangeDetector {
   /// Minimum average difference between YUV deltas that will trigger a scene change.
-  threshold: u64,
+  threshold: usize,
   /// Fast scene cut detection mode, uses simple SAD instead of encoder cost estimates.
   fast_mode: bool,
+  /// scaling factor for fast scene detection
+  scale_factor: usize,
+  /// Number of pixels in scaled frame for fast mode
+  pixels: usize,
   /// Determine whether or not short scene flashes should be excluded
   exclude_scene_flashes: bool,
   /// Frames that cannot be marked as keyframes due to the algorithm excluding them.
@@ -253,7 +258,7 @@ impl SceneChangeDetector {
     }
     delta as f64 / self.pixels as f64
   }
-  }
+}
 
 /// Scaling factor for frame in scenedetection
 fn detect_scale_factor(sequence: &Arc<Sequence>) -> usize {
