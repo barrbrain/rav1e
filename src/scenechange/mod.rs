@@ -15,7 +15,6 @@ use crate::frame::*;
 use crate::util::{CastFromPrimitive, Pixel};
 use rust_hawktracer::*;
 use std::cmp;
-use std::collections::BTreeSet;
 use std::sync::Arc;
 
 /// Runs keyframe detection on frames from the lookahead queue.
@@ -55,7 +54,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
     // This may be adjusted later.
     //
     // This threshold is only used for the fast scenecut implementation.
-    const BASE_THRESHOLD: usize = 12;
+    const BASE_THRESHOLD: usize = 20;
     let bit_depth = encoder_config.bit_depth;
     let fast_mode = encoder_config.speed_settings.fast_scene_detection
       || encoder_config.low_latency;
