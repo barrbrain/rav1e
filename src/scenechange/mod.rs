@@ -323,6 +323,28 @@ impl SceneChangeDetector {
     }
     delta
   }
+
+/// Scaling factor for frame in scenedetection
+fn detect_scale_factor(sequence: &Arc<Sequence>) -> usize {
+  let small_edge =
+    cmp::min(sequence.max_frame_height, sequence.max_frame_width) as usize;
+  let scale_factor = match small_edge {
+    0..=480 => 1,
+    481..=720 => 2,
+    721..=1080 => 3,
+    1081..=1600 => 4,
+    1601..=std::usize::MAX => 6,
+    _ => 1,
+  } as usize;
+  debug!(
+    "Scene detection scale factor {}, [{},{}] -> [{},{}]",
+    scale_factor,
+    sequence.max_frame_width,
+    sequence.max_frame_height,
+    sequence.max_frame_width as usize / scale_factor,
+    sequence.max_frame_height as usize / scale_factor
+  );
+  scale_factor
 }
 
 /// This struct primarily exists for returning metrics to the caller
