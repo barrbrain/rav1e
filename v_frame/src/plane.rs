@@ -479,6 +479,49 @@ impl<T: Pixel> Plane<T> {
     new
   }
 
+  /// Returns plane with downscaled resolution
+  /// Downscaling the plane by integer value
+  pub fn downscale(&self, scale: usize) -> Plane<T> {
+    let src = self;
+    // unsafe: all pixels initialized in this function
+    let mut new = unsafe {
+      Plane::new_uninitialized(
+        src.cfg.width / scale,
+        src.cfg.height / scale,
+        src.cfg.xdec + 1,
+        src.cfg.ydec + 1,
+        src.cfg.xpad / scale,
+        src.cfg.ypad / scale,
+      )
+    };
+
+    let width = new.cfg.width;
+    let height = new.cfg.height;
+
+    let data_origin = src.data_origin();
+    for (_, dst_row) in new
+      .mut_slice(PlaneOffset::default())
+      .rows_iter_mut()
+      .enumerate()
+      .take(height)
+    {
+      for (col, dst) in dst_row.iter_mut().take(width).enumerate() {
+        let mut sum = 0;
+        for x in 1..=scale {
+          let src_row = &data_origin[(src.cfg.stride * 2 + x)..];
+          for y in 1..=scale {
+            sum += u32::cast_from(src_row[col * 2 + y]) as usize
+          }
+        }
+
+        let pixels = scale * scale;
+        let avg = sum / pixels;
+        *dst = T::cast_from(avg);
+      }
+    }
+    new
+  }
+
   /// Iterates over the pixels in the plane, skipping the padding.
   pub fn iter(&self) -> PlaneIter<'_, T> {
     PlaneIter::new(self)
