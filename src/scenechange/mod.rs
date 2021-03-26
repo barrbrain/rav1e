@@ -71,7 +71,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
       1
     };
 
-    let frame_buffer = Vec::new();
+    let frame_buffer = Vec::with_capacity(2);
 
     Self {
       threshold: BASE_THRESHOLD * bit_depth / 8,
@@ -117,12 +117,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
 
     // Set our scenecut method
     let result = if self.fast_mode {
-      self.fast_scenecut(
-        frame_set[0].clone(),
-        frame_set[1].clone(),
-        input_frameno,
-        previous_keyframe,
-      )
+      self.fast_scenecut(frame_set[0].clone(), frame_set[1].clone())
     } else {
       self.cost_scenecut(
         frame_set[0].clone(),
@@ -146,14 +141,25 @@ impl<T: Pixel> SceneChangeDetector<T> {
   /// The fast algorithm detects fast cuts using a raw difference
   /// in pixel values between the scaled frames.
   fn fast_scenecut(
-    &self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>, frameno: u64,
-    previous_keyframe: u64,
+    &mut self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>,
   ) -> ScenecutResult {
     // Downscaling both frames for comparison
-    let frame1_scaled = frame1.planes[0].clone().downscale(self.scale_factor);
-    let frame2_scaled = frame2.planes[0].clone().downscale(self.scale_factor);
 
-    let delta = self.delta_in_planes(&frame1_scaled, &frame2_scaled);
+    if self.frame_buffer.len() == 0 {
+      let frame1_scaled =
+        frame1.planes[0].clone().downscale(self.scale_factor);
+      self.frame_buffer.push(frame1_scaled);
+
+      let frame2_scaled =
+        frame2.planes[0].clone().downscale(self.scale_factor);
+      self.frame_buffer.push(frame2_scaled);
+    } else {
+      self.frame_buffer[0] = self.frame_buffer[1].clone();
+      frame2.planes[0].clone().downscale(self.scale_factor);
+    }
+
+    let delta =
+      self.delta_in_planes(&self.frame_buffer[0], &self.frame_buffer[1]);
     let threshold = self.threshold;
     ScenecutResult {
       intra_cost: threshold as f64,
