@@ -7,6 +7,7 @@
 // Media Patent License 1.0 was not distributed with this source code in the
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
+use rust_hawktracer::*;
 use std::iter::FusedIterator;
 use std::marker::PhantomData;
 use std::mem;
@@ -481,6 +482,7 @@ impl<T: Pixel> Plane<T> {
 
   /// Returns plane with downscaled resolution
   /// Downscaling the plane by integer value
+  #[hawktracer(downscale)]
   pub fn downscale(&self, scale: usize) -> Plane<T> {
     let src = self;
     // unsafe: all pixels initialized in this function
