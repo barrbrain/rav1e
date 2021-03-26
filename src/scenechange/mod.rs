@@ -305,10 +305,13 @@ impl SceneChangeDetector {
     }
   }
 
+  /// Calculates delta beetween 2 planes
+  /// returns average for pixel
   fn delta_in_planes<T: Pixel>(
     &self, plane1: &Plane<T>, plane2: &Plane<T>,
-  ) -> u64 {
+  ) -> f64 {
     let mut delta = 0;
+
     let lines = plane1.rows_iter().zip(plane2.rows_iter());
 
     for (l1, l2) in lines {
@@ -316,12 +319,13 @@ impl SceneChangeDetector {
         .iter()
         .zip(l2.iter())
         .map(|(&p1, &p2)| {
-          (i16::cast_from(p1) - i16::cast_from(p2)).abs() as u64
+          (i16::cast_from(p1) - i16::cast_from(p2)).abs() as usize
         })
-        .sum::<u64>();
+        .sum::<usize>();
       delta += delta_line;
     }
-    delta
+    delta as f64 / self.pixels as f64
+  }
   }
 
 /// Scaling factor for frame in scenedetection
