@@ -227,22 +227,25 @@ impl SceneChangeDetector {
   /// for coding this frame.
   ///
   /// The fast algorithm detects fast cuts using a raw difference
-  /// in pixel values between the frames.
-  /// It does not handle pans well, but the scene flash detection compensates for this
-  /// in many cases.
+  /// in pixel values between the scaled frames.
   fn has_scenecut<T: Pixel>(
     &self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>, frameno: u64,
     previous_keyframe: u64,
   ) -> ScenecutResult {
     if self.fast_mode {
-      let len = frame2.planes[0].cfg.width * frame2.planes[0].cfg.height;
-      let delta = self.delta_in_planes(&frame1.planes[0], &frame2.planes[0]);
-      let threshold = self.threshold * len as u64;
+      // Downscaling both frames for comparison
+      let frame1_scaled =
+        frame1.planes[0].clone().downscale(self.scale_factor);
+      let frame2_scaled =
+        frame2.planes[0].clone().downscale(self.scale_factor);
+
+      let delta = self.delta_in_planes(&frame1_scaled, &frame2_scaled);
+      let threshold = self.threshold;
       ScenecutResult {
         intra_cost: threshold as f64,
         threshold: threshold as f64,
         inter_cost: delta as f64,
-        has_scenecut: delta >= threshold,
+        has_scenecut: delta >= threshold as f64,
       }
     } else {
       let frame2_ref2 = Arc::clone(&frame2);
