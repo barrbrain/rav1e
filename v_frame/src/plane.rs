@@ -486,8 +486,12 @@ impl<T: Pixel> Plane<T> {
 
   /// Returns plane with downscaled resolution
   /// Downscaling the plane by integer value
+  /// Not padded
   #[hawktracer(downscale)]
   pub fn downscale(&self, scale: usize) -> Plane<T> {
+    let box_pixels = scale * scale;
+    let half_box_pixels = box_pixels / 2; // Used for rounding int division
+
     let src = self;
     let data_origin = src.data_origin();
 
@@ -503,7 +507,6 @@ impl<T: Pixel> Plane<T> {
       )
     };
 
-    new_plane.cfg.stride = src.cfg.width / scale;
     let stride = new_plane.cfg.stride;
     let width = new_plane.cfg.width;
     let height = new_plane.cfg.height;
@@ -523,7 +526,6 @@ impl<T: Pixel> Plane<T> {
         // Iter dst rows
         let dst_rows = chunk.chunks_mut(stride);
         for (row_offset, dst_row) in dst_rows.enumerate() {
-          assert_eq!(dst_row.len(), stride); // TODO: Remove this once testing is implemented
           let row_idx = chunk_idx * chunk_rows + row_offset;
 
           // Iter dst cols
@@ -546,8 +548,7 @@ impl<T: Pixel> Plane<T> {
             }
 
             // Box average
-            let pixels = scale * scale;
-            let avg = sum as usize / pixels;
+            let avg = (sum as usize + half_box_pixels) / box_pixels;
             *dst = T::cast_from(avg);
           }
         }
@@ -817,8 +818,8 @@ pub mod test {
   #[test]
   fn copy_from_raw_u8() {
     #[rustfmt::skip]
-    let mut plane = Plane::from_slice(&
-      vec![
+    let mut plane = Plane::from_slice(
+      &[
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
@@ -888,43 +889,6 @@ pub mod test {
   }
 
   #[test]
-  fn test_plane_downscaling() {
-    #[rustfmt::skip]
-  let plane = Plane::<u8> {
-      data: PlaneData::from_slice(&[
-        1, 2, 3, 4, 1, 2, 3, 4,
-        0, 0, 8, 7, 6, 5, 8, 7, 
-        6, 5, 8, 7, 6, 5, 8, 7, 
-        6, 5, 8, 7, 0, 0, 2, 3, 
-        4, 5, 0, 0, 9, 8, 7, 6, 
-        0, 0, 0, 0, 2, 3, 4, 5,
-        0, 0, 0, 0, 2, 3, 4, 5,
-      ]),
-      cfg: PlaneConfig {
-        stride: 8,
-        alloc_height: 7,
-        width: 8,
-        height: 7,
-        xdec: 0,
-        ydec: 0,
-        xpad: 0,
-        ypad: 0,
-        xorigin: 0,
-        yorigin: 0,
-      },
-    };
-
-    let downscaled = plane.downscale(3);
-
-    #[rustfmt::skip]
-    assert_eq!(
-      &[3, 4,
-        3, 3    
-      ],
-      &downscaled.data[..4]);
-  }
-
-  #[test]
   fn test_plane_downsample_odd() {
     #[rustfmt::skip]
     let plane = Plane::<u8> {
@@ -969,6 +933,127 @@ pub mod test {
       &downsampled.data[..]
     );
   }
+
+  #[test]
+  fn test_plane_downscale() {
+    #[rustfmt::skip]
+    let plane = Plane::<u8> {
+      data: PlaneData::from_slice(&[
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 1, 4, 5, 0, 0,
+        0, 0, 2, 3, 6, 7, 0, 0,
+        0, 0, 8, 9, 7, 5, 0, 0,
+        0, 0, 9, 8, 3, 1, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+      ]),
+      cfg: PlaneConfig {
+        stride: 8,
+        alloc_height: 9,
+        width: 4,
+        height: 4,
+        xdec: 0,
+        ydec: 0,
+        xpad: 0,
+        ypad: 0,
+        xorigin: 2,
+        yorigin: 3,
+      },
+    };
+    let downsampled = plane.downscale(2);
+
+    #[rustfmt::skip]
+    assert_eq!(
+      &[
+        2, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        9, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      ][..],
+      &downsampled.data[..]
+    );
+  }
+
+  #[test]
+  fn test_plane_downscale_odd() {
+    #[rustfmt::skip]
+  let plane = Plane::<u8> {
+      data: PlaneData::from_slice(&[
+        1, 2, 3, 4, 1, 2, 3, 4,
+        0, 0, 8, 7, 6, 5, 8, 7, 
+        6, 5, 8, 7, 6, 5, 8, 7, 
+        6, 5, 8, 7, 0, 0, 2, 3, 
+        4, 5, 0, 0, 9, 8, 7, 6, 
+        0, 0, 0, 0, 2, 3, 4, 5,
+        0, 0, 0, 0, 2, 3, 4, 5,
+      ]),
+      cfg: PlaneConfig {
+        stride: 8,
+        alloc_height: 7,
+        width: 8,
+        height: 7,
+        xdec: 0,
+        ydec: 0,
+        xpad: 0,
+        ypad: 0,
+        xorigin: 0,
+        yorigin: 0,
+      },
+    };
+
+    let downscaled = plane.downscale(3);
+
+    #[rustfmt::skip]
+    assert_eq!(
+      &[
+        4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 
+      ],
+      &downscaled.data[..]);
+  }
+
+  #[test]
+  fn test_plane_downscale_odd_2() {
+    #[rustfmt::skip]
+    let plane = Plane::<u8> {
+      data: PlaneData::from_slice(&[
+        9, 8, 3, 1, 0, 1, 4, 5, 0, 0,
+        0, 1, 4, 5, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 9, 0,
+        0, 2, 3, 6, 7, 0, 0, 0, 0, 0,
+        0, 0, 8, 9, 7, 5, 0, 0, 0, 0,
+        9, 8, 3, 1, 0, 1, 4, 5, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 2, 3, 6, 7, 0,
+        0, 0, 0, 0, 0, 0, 8, 9, 7, 5,
+        0, 0, 0, 0, 9, 8, 3, 1, 0, 0
+      ]),
+      cfg: PlaneConfig {
+        stride: 10,
+        alloc_height: 10,
+        width: 10,
+        height: 10,
+        xdec: 0,
+        ydec: 0,
+        xpad: 0,
+        ypad: 0,
+        xorigin: 0,
+        yorigin: 0,
+      },
+    };
+    let downsampled = plane.downscale(3);
+
+    #[rustfmt::skip]
+    assert_eq!(
+      &[
+        3, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        4, 4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      ][..],
+      &downsampled.data[..]
+    );
+  }
+
   #[test]
   fn test_plane_pad() {
     #[rustfmt::skip]
