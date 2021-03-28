@@ -524,6 +524,7 @@ impl<T: Pixel> Plane<T> {
           for (col_idx, dst) in dst_row[0..width].iter_mut().enumerate() {
             let mut sum = 0;
 
+            // Sum box
             // TODO: use SIMD here, maybe try `faster` crate
 
             // Iter src row
@@ -544,7 +545,7 @@ impl<T: Pixel> Plane<T> {
             *dst = T::cast_from(avg);
           }
         }
-      },
+      }
     );
 
     new_plane
