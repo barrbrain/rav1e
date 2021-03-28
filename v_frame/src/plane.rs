@@ -509,7 +509,8 @@ impl<T: Pixel> Plane<T> {
     // Par iter over dst chunks
     let np_raw_slice = new_plane.data.deref_mut();
     let threads = current_num_threads();
-    let chunk_size = (height + threads / 2) * stride / threads;
+    let chunk_rows = (height + threads / 2) / threads;
+    let chunk_size = chunk_rows * stride;
     np_raw_slice[0..height].par_chunks_mut(chunk_size).enumerate().for_each(
       |(chunk_idx, chunk)| {
         
@@ -517,7 +518,7 @@ impl<T: Pixel> Plane<T> {
         let dst_rows = chunk.chunks_mut(stride);
         for (row_offset, dst_row) in dst_rows.enumerate() {
           assert_eq!(dst_row.len(), stride);
-          let row_idx = chunk_idx * chunk_size + row_offset;
+          let row_idx = chunk_idx * chunk_rows + row_offset;
 
           // Iter dst cols
           for (col_idx, dst) in dst_row[0..width].iter_mut().enumerate() {
