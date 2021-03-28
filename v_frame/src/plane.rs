@@ -920,8 +920,8 @@ pub mod test {
     assert_eq!(
       &[3, 4,
         3, 3    
-      ][..],
-      &downscaled.data[..]);
+      ],
+      &downscaled.data[..4]);
   }
 
   #[test]
