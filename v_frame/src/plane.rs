@@ -511,20 +511,21 @@ impl<T: Pixel> Plane<T> {
     let threads = current_num_threads();
     let chunk_rows = (height + threads / 2) / threads;
     let chunk_size = chunk_rows * stride;
-    np_raw_slice[0..height].par_chunks_mut(chunk_size).enumerate().for_each(
+    let height_limit = height * stride;
+    np_raw_slice[0..height_limit].par_chunks_mut(chunk_size).enumerate().for_each(
       |(chunk_idx, chunk)| {
         
         // Iter dst rows
         let dst_rows = chunk.chunks_mut(stride);
         for (row_offset, dst_row) in dst_rows.enumerate() {
-          assert_eq!(dst_row.len(), stride);
+          assert_eq!(dst_row.len(), stride); // TODO: Remove this once testing is implemented
           let row_idx = chunk_idx * chunk_rows + row_offset;
 
           // Iter dst cols
           for (col_idx, dst) in dst_row[0..width].iter_mut().enumerate() {
             let mut sum = 0;
 
-            // Sum box
+            // Sum box of size scale * scale
             // TODO: use SIMD here, maybe try `faster` crate
 
             // Iter src row
@@ -535,13 +536,13 @@ impl<T: Pixel> Plane<T> {
               // Iter src col
               for x in 0..scale {
                 let src_col_idx = col_idx * scale + x;
-                sum += u32::cast_from(src_row[src_col_idx]) as usize;
+                sum += u32::cast_from(src_row[src_col_idx]);
               }
             }
 
             // Box average
             let pixels = scale * scale;
-            let avg = sum / pixels;
+            let avg = sum as usize / pixels;
             *dst = T::cast_from(avg);
           }
         }
