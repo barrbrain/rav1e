@@ -509,7 +509,8 @@ impl<T: Pixel> Plane<T> {
     // Par iter over dst chunks
     let np_raw_slice = new_plane.data.deref_mut();
     let threads = current_num_threads();
-    let chunk_rows = (height + threads / 2) / threads;
+    let chunk_rows = cmp::max((height + threads / 2) / threads, 1);
+
     let chunk_size = chunk_rows * stride;
     let height_limit = height * stride;
     np_raw_slice[0..height_limit].par_chunks_mut(chunk_size).enumerate().for_each(
