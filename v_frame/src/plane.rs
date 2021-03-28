@@ -913,7 +913,7 @@ pub mod test {
       },
     };
 
-    let downscaled = plane.downscale(2);
+    let downscaled = plane.downscale(3);
 
     #[rustfmt::skip]
     assert_eq!(
