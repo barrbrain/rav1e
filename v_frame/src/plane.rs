@@ -885,6 +885,44 @@ pub mod test {
       &downsampled.data[..]
     );
   }
+
+  #[test]
+  fn test_plane_downscaling() {
+    #[rustfmt::skip]
+  let plane = Plane::<u8> {
+      data: PlaneData::from_slice(&[
+        1, 2, 3, 4, 1, 2, 3, 4,
+        0, 0, 8, 7, 6, 5, 8, 7, 
+        6, 5, 8, 7, 6, 5, 8, 7, 
+        6, 5, 8, 7, 0, 0, 2, 3, 
+        4, 5, 0, 0, 9, 8, 7, 6, 
+        0, 0, 0, 0, 2, 3, 4, 5,
+        0, 0, 0, 0, 2, 3, 4, 5,
+      ]),
+      cfg: PlaneConfig {
+        stride: 8,
+        alloc_height: 7,
+        width: 8,
+        height: 7,
+        xdec: 0,
+        ydec: 0,
+        xpad: 0,
+        ypad: 0,
+        xorigin: 0,
+        yorigin: 0,
+      },
+    };
+
+    let downscaled = plane.downscale(2);
+
+    #[rustfmt::skip]
+    assert_eq!(
+      &[3, 4,
+        3, 3    
+      ][..],
+      &downscaled.data[..]);
+  }
+
   #[test]
   fn test_plane_downsample_odd() {
     #[rustfmt::skip]
