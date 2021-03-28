@@ -7,10 +7,11 @@
 // Media Patent License 1.0 was not distributed with this source code in the
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
+use rayon::current_num_threads;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
-use rayon::current_num_threads;
 use rust_hawktracer::*;
+use std::cmp;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Index, IndexMut, Range};
@@ -512,10 +513,12 @@ impl<T: Pixel> Plane<T> {
     let chunk_rows = cmp::max((height + threads / 2) / threads, 1);
 
     let chunk_size = chunk_rows * stride;
+
     let height_limit = height * stride;
-    np_raw_slice[0..height_limit].par_chunks_mut(chunk_size).enumerate().for_each(
-      |(chunk_idx, chunk)| {
-        
+    np_raw_slice[0..height_limit]
+      .par_chunks_mut(chunk_size)
+      .enumerate()
+      .for_each(|(chunk_idx, chunk)| {
         // Iter dst rows
         let dst_rows = chunk.chunks_mut(stride);
         for (row_offset, dst_row) in dst_rows.enumerate() {
@@ -547,8 +550,7 @@ impl<T: Pixel> Plane<T> {
             *dst = T::cast_from(avg);
           }
         }
-      }
-    );
+      });
 
     new_plane
   }
