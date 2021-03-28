@@ -7,8 +7,10 @@
 // Media Patent License 1.0 was not distributed with this source code in the
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
+use rayon::iter::ParallelIterator;
+use rayon::prelude::*;
+use rayon::current_num_threads;
 use rust_hawktracer::*;
-use std::iter::FusedIterator;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Index, IndexMut, Range};
@@ -20,6 +22,7 @@ use std::{
   fmt::{Debug, Display, Formatter},
   usize,
 };
+use std::{iter::FusedIterator, ops::DerefMut};
 
 use crate::math::*;
 use crate::pixel::*;
@@ -485,8 +488,10 @@ impl<T: Pixel> Plane<T> {
   #[hawktracer(downscale)]
   pub fn downscale(&self, scale: usize) -> Plane<T> {
     let src = self;
+    let data_origin = src.data_origin();
+
     // unsafe: all pixels initialized in this function
-    let mut new = unsafe {
+    let mut new_plane = unsafe {
       Plane::new_uninitialized(
         src.cfg.width / scale,
         src.cfg.height / scale,
@@ -497,31 +502,51 @@ impl<T: Pixel> Plane<T> {
       )
     };
 
-    let width = new.cfg.width;
-    let height = new.cfg.height;
+    let stride = new_plane.cfg.stride;
+    let width = new_plane.cfg.width;
+    let height = new_plane.cfg.height;
 
-    let data_origin = src.data_origin();
-    for (_, dst_row) in new
-      .mut_slice(PlaneOffset::default())
-      .rows_iter_mut()
-      .enumerate()
-      .take(height)
-    {
-      for (col, dst) in dst_row.iter_mut().take(width).enumerate() {
-        let mut sum = 0;
-        for x in 1..=scale {
-          let src_row = &data_origin[(src.cfg.stride * 2 + x)..];
-          for y in 1..=scale {
-            sum += u32::cast_from(src_row[col * 2 + y]) as usize
+    // Par iter over dst chunks
+    let np_raw_slice = new_plane.data.deref_mut();
+    let threads = current_num_threads();
+    let chunk_size = (height + threads / 2) * stride / threads;
+    np_raw_slice[0..height].par_chunks_mut(chunk_size).enumerate().for_each(
+      |(chunk_idx, chunk)| {
+        
+        // Iter dst rows
+        let dst_rows = chunk.chunks_mut(stride);
+        for (row_offset, dst_row) in dst_rows.enumerate() {
+          assert_eq!(dst_row.len(), stride);
+          let row_idx = chunk_idx * chunk_size + row_offset;
+
+          // Iter dst cols
+          for (col_idx, dst) in dst_row[0..width].iter_mut().enumerate() {
+            let mut sum = 0;
+
+            // TODO: use SIMD here, maybe try `faster` crate
+
+            // Iter src row
+            for y in 0..scale {
+              let src_row_idx = row_idx * scale + y;
+              let src_row = &data_origin[(src_row_idx * src.cfg.stride)..];
+
+              // Iter src col
+              for x in 0..scale {
+                let src_col_idx = col_idx * scale + x;
+                sum += u32::cast_from(src_row[src_col_idx]) as usize;
+              }
+            }
+
+            // Box average
+            let pixels = scale * scale;
+            let avg = sum / pixels;
+            *dst = T::cast_from(avg);
           }
         }
+      },
+    );
 
-        let pixels = scale * scale;
-        let avg = sum / pixels;
-        *dst = T::cast_from(avg);
-      }
-    }
-    new
+    new_plane
   }
 
   /// Iterates over the pixels in the plane, skipping the padding.
