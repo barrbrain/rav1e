@@ -160,7 +160,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
     let delta =
       self.delta_in_planes(&self.frame_buffer[0], &self.frame_buffer[1]);
     let threshold = self.threshold;
-    if delta >= threshold {
+    if delta >= threshold as f64 {
       self.frame_buffer.clear();
     }
 
