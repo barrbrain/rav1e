@@ -496,13 +496,14 @@ impl<T: Pixel> Plane<T> {
       Plane::new_uninitialized(
         src.cfg.width / scale,
         src.cfg.height / scale,
-        src.cfg.xdec + 1,
-        src.cfg.ydec + 1,
-        src.cfg.xpad / scale,
-        src.cfg.ypad / scale,
+        0,
+        0,
+        0,
+        0,
       )
     };
 
+    new_plane.cfg.stride = src.cfg.width / scale;
     let stride = new_plane.cfg.stride;
     let width = new_plane.cfg.width;
     let height = new_plane.cfg.height;
