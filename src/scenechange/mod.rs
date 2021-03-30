@@ -27,6 +27,8 @@ pub struct SceneChangeDetector<T: Pixel> {
   scale_factor: usize,
   // Frame buffer for scaled frames
   frame_buffer: Vec<Plane<T>>,
+  // Scenechange results for adaptive threshold
+  score_deque: Vec<f64>,
   /// Number of pixels in scaled frame for fast mode
   pixels: usize,
   /// The bit depth of the video.
@@ -54,7 +56,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
     // This may be adjusted later.
     //
     // This threshold is only used for the fast scenecut implementation.
-    const BASE_THRESHOLD: usize = 20;
+    const BASE_THRESHOLD: usize = 25;
     let bit_depth = encoder_config.bit_depth;
     let fast_mode = encoder_config.speed_settings.fast_scene_detection
       || encoder_config.low_latency;
@@ -63,7 +65,9 @@ impl<T: Pixel> SceneChangeDetector<T> {
     let scale_factor =
       if fast_mode { detect_scale_factor(&sequence) } else { 1 as usize };
 
+    let score_deque = Vec::with_capacity(5);
     // Pixel count for fast scenedetect
+
     let pixels = if fast_mode {
       (sequence.max_frame_height as usize / scale_factor)
         * (sequence.max_frame_width as usize / scale_factor)
@@ -78,6 +82,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
       fast_mode,
       scale_factor,
       frame_buffer,
+      score_deque,
       pixels,
       bit_depth,
       cpu_feature_level,
@@ -103,7 +108,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
     // Find the distance to the previous keyframe.
     let distance = input_frameno - previous_keyframe;
 
-    // Handle minimum and maximum key frame intervals.
+    // Handle minimum and maximum keyframe intervals.
     if distance < self.encoder_config.min_key_frame_interval {
       return false;
     }
@@ -138,6 +143,25 @@ impl<T: Pixel> SceneChangeDetector<T> {
     keyframe_check
   }
 
+  /// Compares current scene score to adapted threshold based on previous scores
+  /// Use previous frames delta for adapting threshold
+  fn adaptive_scenecut(&mut self, scene_score: f64) -> bool {
+    if self.score_deque.len() == 0 {
+      return true; // we skip high delta on first frame comparision as it's probably inside flashing or high motion scene
+    } else {
+      let sum_of_deque: f64 = self.score_deque.iter().sum(); // average of last n(5) frames
+      let avg_for_frames: f64 =
+        (sum_of_deque as usize / self.score_deque.len() as usize) as f64;
+      debug!(
+        "[SC-Detect] D: {} {:.1?} Cut: {}",
+        scene_score,
+        self.score_deque,
+        scene_score > self.threshold as f64 + avg_for_frames
+      );
+      scene_score > self.threshold as f64 + avg_for_frames
+    }
+  }
+
   /// The fast algorithm detects fast cuts using a raw difference
   /// in pixel values between the scaled frames.
   #[hawktracer(fast_scenecut)]
@@ -145,7 +169,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
     &mut self, frame1: Arc<Frame<T>>, frame2: Arc<Frame<T>>,
   ) -> ScenecutResult {
     // Downscaling both frames for comparison
-
+    // Moving scaled frames to buffer
     if self.frame_buffer.len() == 0 {
       let frame1_scaled = frame1.planes[0].downscale(self.scale_factor);
       self.frame_buffer.push(frame1_scaled);
@@ -159,16 +183,28 @@ impl<T: Pixel> SceneChangeDetector<T> {
 
     let delta =
       self.delta_in_planes(&self.frame_buffer[0], &self.frame_buffer[1]);
-    let threshold = self.threshold;
-    if delta >= threshold as f64 {
+
+    // Adaptive scenecut check;
+    let scenecut =
+      delta >= self.threshold as f64 && self.adaptive_scenecut(delta);
+
+    if scenecut {
+      // Clear buffers
       self.frame_buffer.clear();
+      self.score_deque.clear();
+    } else {
+      // Keep score deque 5 frames
+      self.score_deque.push(delta as f64);
+      if self.score_deque.len() > 5 {
+        self.score_deque.remove(0);
+      }
     }
 
     ScenecutResult {
-      intra_cost: threshold as f64,
-      threshold: threshold as f64,
+      intra_cost: self.threshold as f64,
+      threshold: self.threshold as f64,
       inter_cost: delta as f64,
-      has_scenecut: delta >= threshold as f64,
+      has_scenecut: scenecut,
     }
   }
 
