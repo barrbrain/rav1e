@@ -153,8 +153,8 @@ impl<T: Pixel> SceneChangeDetector<T> {
       let frame2_scaled = frame2.planes[0].downscale(self.scale_factor);
       self.frame_buffer.push(frame2_scaled);
     } else {
-      self.frame_buffer[0] = self.frame_buffer[1].clone();
-      self.frame_buffer[1] = frame2.planes[0].downscale(self.scale_factor);
+      self.frame_buffer.remove(0);
+      self.frame_buffer.push(frame2.planes[0].downscale(self.scale_factor));
     }
 
     let delta =
