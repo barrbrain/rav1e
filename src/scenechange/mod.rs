@@ -304,11 +304,12 @@ fn detect_scale_factor(sequence: &Arc<Sequence>) -> usize {
   let small_edge =
     cmp::min(sequence.max_frame_height, sequence.max_frame_width) as usize;
   let scale_factor = match small_edge {
-    0..=480 => 1,
-    481..=720 => 2,
-    721..=1080 => 3,
-    1081..=1600 => 4,
-    1601..=std::usize::MAX => 6,
+    0..=240 => 1,
+    241..=480 => 2,
+    481..=720 => 4,
+    721..=1080 => 8,
+    1081..=1600 => 16,
+    1601..=std::usize::MAX => 32,
     _ => 1,
   } as usize;
   debug!(
