@@ -490,7 +490,7 @@ impl<T: Pixel> Plane<T> {
   #[hawktracer(downscale)]
   pub fn downscale(&self, scale: usize) -> Plane<T> {
     let box_pixels = scale * scale;
-    let half_box_pixels = box_pixels / 2; // Used for rounding int division
+    let half_box_pixels = box_pixels as u32 / 2; // Used for rounding int division
 
     let src = self;
     let data_origin = src.data_origin();
@@ -530,7 +530,7 @@ impl<T: Pixel> Plane<T> {
 
           // Iter dst cols
           for (col_idx, dst) in dst_row[0..width].iter_mut().enumerate() {
-            let mut sum = 0;
+            let mut sum = half_box_pixels;
 
             // Sum box of size scale * scale
             // TODO: use SIMD here, maybe try `faster` crate
@@ -548,7 +548,7 @@ impl<T: Pixel> Plane<T> {
             }
 
             // Box average
-            let avg = (sum as usize + half_box_pixels) / box_pixels;
+            let avg = sum as usize / box_pixels;
             *dst = T::cast_from(avg);
           }
         }
