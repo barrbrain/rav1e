@@ -142,19 +142,24 @@ impl<T: Pixel> SceneChangeDetector<T> {
   }
 
   /// Compares current scene score to adapted threshold based on previous scores
-  /// Use previous frames delta for adapting threshold
+  /// Returns true if current scene score is higher than adapted threshold
   fn adaptive_scenecut(&mut self, scene_score: f64) -> bool {
     if self.score_deque.len() == 0 {
       return true; // we skip high delta on first frame comparision as it's probably inside flashing or high motion scene
     } else {
-      let sum_of_deque: f64 = self.score_deque.iter().max(); // average of last n(5) frames
+      let max_of_deque: f64 = self
+        .score_deque
+        .iter()
+        .cloned()
+        .fold(-1. / 0. /* -inf */, f64::max); // max of last n(5) frames
+
+      //
+      let scenecut = scene_score > self.threshold as f64 + max_of_deque;
       debug!(
         "[SC-Detect] P: {:.1} {:.1?} Cut: {}",
-        scene_score,
-        self.score_deque,
-        scene_score > self.threshold as f64 + avg_for_frames
+        scene_score, self.score_deque, scenecut
       );
-      scene_score > self.threshold as f64 + avg_for_frames
+      scenecut
     }
   }
 
