@@ -271,7 +271,6 @@ impl<T: Pixel> ContextInner<T> {
 
     let seq = Arc::new(Sequence::new(enc));
     let inter_cfg = InterConfig::new(enc);
-    let lookahead_distance = inter_cfg.keyframe_lookahead_distance() as usize;
 
     ContextInner {
       frame_count: 0,
@@ -289,7 +288,6 @@ impl<T: Pixel> ContextInner<T> {
       keyframe_detector: SceneChangeDetector::new(
         *enc,
         CpuFeatureLevel::default(),
-        lookahead_distance,
         seq.clone(),
       ),
       config: Arc::new(*enc),

@@ -36,14 +36,13 @@ pub struct SceneChangeDetector<T: Pixel> {
   /// The CPU feature level to be used.
   cpu_feature_level: CpuFeatureLevel,
   encoder_config: EncoderConfig,
-  lookahead_distance: usize,
   sequence: Arc<Sequence>,
 }
 
 impl<T: Pixel> SceneChangeDetector<T> {
   pub fn new(
     encoder_config: EncoderConfig, cpu_feature_level: CpuFeatureLevel,
-    lookahead_distance: usize, sequence: Arc<Sequence>,
+    sequence: Arc<Sequence>,
   ) -> Self {
     // This implementation is based on a Python implementation at
     // https://pyscenedetect.readthedocs.io/en/latest/reference/detection-methods/.
@@ -87,7 +86,6 @@ impl<T: Pixel> SceneChangeDetector<T> {
       bit_depth,
       cpu_feature_level,
       encoder_config,
-      lookahead_distance,
       sequence,
     }
   }
