@@ -62,7 +62,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
 
     // Scale factor for fast scene detection
     let scale_factor =
-      if fast_mode { detect_scale_factor(&sequence) } else { 1 as usize };
+      if fast_mode { detect_scale_factor(&sequence) } else { 1_usize };
 
     let score_deque = Vec::with_capacity(5);
     // Pixel count for fast scenedetect
@@ -137,15 +137,14 @@ impl<T: Pixel> SceneChangeDetector<T> {
       result.inter_cost,
       if result.has_scenecut { "Scenecut" } else { "No cut" }
     );
-    let keyframe_check = result.has_scenecut;
-    keyframe_check
+    result.has_scenecut
   }
 
   /// Compares current scene score to adapted threshold based on previous scores
   /// Returns true if current scene score is higher than adapted threshold
   fn adaptive_scenecut(&mut self, scene_score: f64) -> bool {
-    if self.score_deque.len() == 0 {
-      return true; // we skip high delta on first frame comparision as it's probably inside flashing or high motion scene
+    if self.score_deque.is_empty() {
+      true; // we skip high delta on first frame comparision as it's probably inside flashing or high motion scene
     } else {
       let max_of_deque: f64 = self
         .score_deque
@@ -171,7 +170,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
   ) -> ScenecutResult {
     // Downscaling both frames for comparison
     // Moving scaled frames to buffer
-    if self.frame_buffer.len() == 0 {
+    if self.frame_buffer.is_empty() {
       let frame1_scaled = frame1.planes[0].downscale(self.scale_factor);
       self.frame_buffer.push(frame1_scaled);
 
