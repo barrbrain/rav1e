@@ -144,7 +144,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
   /// Returns true if current scene score is higher than adapted threshold
   fn adaptive_scenecut(&mut self, scene_score: f64) -> bool {
     if self.score_deque.is_empty() {
-      true; // we skip high delta on first frame comparision as it's probably inside flashing or high motion scene
+      true // we skip high delta on first frame comparision as it's probably inside flashing or high motion scene
     } else {
       let max_of_deque: f64 = self
         .score_deque
