@@ -149,7 +149,7 @@ impl<T: Pixel> SceneChangeDetector<T> {
     } else {
       let sum_of_deque: f64 = self.score_deque.iter().max(); // average of last n(5) frames
       debug!(
-        "[SC-Detect] D: {:.1} {:.1?} Cut: {}",
+        "[SC-Detect] P: {:.1} {:.1?} Cut: {}",
         scene_score,
         self.score_deque,
         scene_score > self.threshold as f64 + avg_for_frames
