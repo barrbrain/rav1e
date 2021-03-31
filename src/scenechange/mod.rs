@@ -147,11 +147,9 @@ impl<T: Pixel> SceneChangeDetector<T> {
     if self.score_deque.len() == 0 {
       return true; // we skip high delta on first frame comparision as it's probably inside flashing or high motion scene
     } else {
-      let sum_of_deque: f64 = self.score_deque.iter().sum(); // average of last n(5) frames
-      let avg_for_frames: f64 =
-        (sum_of_deque as usize / self.score_deque.len() as usize) as f64;
+      let sum_of_deque: f64 = self.score_deque.iter().max(); // average of last n(5) frames
       debug!(
-        "[SC-Detect] D: {} {:.1?} Cut: {}",
+        "[SC-Detect] D: {:.1} {:.1?} Cut: {}",
         scene_score,
         self.score_deque,
         scene_score > self.threshold as f64 + avg_for_frames
