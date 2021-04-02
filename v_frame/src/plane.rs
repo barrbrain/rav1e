@@ -60,7 +60,7 @@ pub struct PlaneConfig {
 
 impl PlaneConfig {
   /// Stride alignment in bytes.
-  const STRIDE_ALIGNMENT_LOG2: usize = 5;
+  const STRIDE_ALIGNMENT_LOG2: usize = 6;
 
   #[inline]
   pub fn new(
@@ -188,7 +188,7 @@ impl<T: Pixel> PlaneData<T> {
       // FIXME: wasm32 allocator fails for alignment larger than 3
       const DATA_ALIGNMENT_LOG2: usize = 3;
     } else {
-      const DATA_ALIGNMENT_LOG2: usize = 5;
+      const DATA_ALIGNMENT_LOG2: usize = 6;
     }
   }
 
@@ -873,19 +873,14 @@ pub mod test {
     let downsampled = plane.downsampled(4, 4);
 
     #[rustfmt::skip]
-    assert_eq!(
-      &[
-        5, 5, 5, 5, 5, 5, 5, 5,
-        5, 5, 5, 5, 5, 5, 5, 5,
-        5, 5, 5, 5, 5, 5, 5, 5,
-        5, 5, 5, 5, 5, 5, 5, 5,
-        6, 6, 6, 6, 6, 6, 6, 6,
-        6, 6, 6, 6, 6, 6, 6, 6,
-        6, 6, 6, 6, 6, 6, 6, 6,
-        6, 6, 6, 6, 6, 6, 6, 6,
-      ][..],
-      &downsampled.data[..]
-    );
+    let expected = &[
+      5, 5,
+      6, 6,
+    ];
+
+    let v: Vec<_> = downsampled.iter().collect();
+
+    assert_eq!(&expected[..], &v[..]);
   }
 
   #[test]
@@ -919,19 +914,13 @@ pub mod test {
     let downsampled = plane.downsampled(3, 3);
 
     #[rustfmt::skip]
-    assert_eq!(
-      &[
-        5, 5, 5, 5, 5, 5, 5, 5,
-        5, 5, 5, 5, 5, 5, 5, 5,
-        5, 5, 5, 5, 5, 5, 5, 5,
-        5, 5, 5, 5, 5, 5, 5, 5,
-        6, 6, 6, 6, 6, 6, 6, 6,
-        6, 6, 6, 6, 6, 6, 6, 6,
-        6, 6, 6, 6, 6, 6, 6, 6,
-        6, 6, 6, 6, 6, 6, 6, 6,
-      ][..],
-      &downsampled.data[..]
-    );
+    let expected = &[
+      5, 5,
+      6, 6,
+    ];
+
+    let v: Vec<_> = downsampled.iter().collect();
+    assert_eq!(&expected[..], &v[..]);
   }
 
   #[test]
