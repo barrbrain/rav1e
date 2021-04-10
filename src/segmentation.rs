@@ -40,6 +40,7 @@ pub fn segmentation_optimize<T: Pixel>(
       .zip(fi.activity_scales.iter())
       .map(|(&d, &a)| d.mul_blog_q24(a))
       .collect::<Vec<_>>();
+    dump(fi.w_in_imp_b, fi.h_in_imp_b, fi.input_frameno, &log_scales_q24);
     // Minimize the total distance from a small set of values to all scales.
     let centroids_q24 = kmeans(64, &mut log_scales_q24);
     // For the selected centroids, derive a target quantizer:
@@ -183,4 +184,17 @@ fn kmeans(limit: usize, data: &mut [i32]) -> [i32; 3] {
   }
 
   centroids
+}
+
+fn dump(w: usize, h: usize, frame: u64, log_scales_q24: &Vec<i32>) {
+  use byteorder::{NativeEndian, WriteBytesExt};
+  use std::io::{self, Write};
+  let mut buf = vec![];
+  buf.write_u64::<NativeEndian>(frame).unwrap();
+  buf.write_u64::<NativeEndian>(w as u64).unwrap();
+  buf.write_u64::<NativeEndian>(h as u64).unwrap();
+  for &log_scale_q24 in log_scales_q24.iter() {
+    buf.write_i32::<NativeEndian>(log_scale_q24).unwrap();
+  }
+  io::stdout().write_all(&buf).unwrap();
 }
