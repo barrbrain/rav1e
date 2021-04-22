@@ -170,7 +170,7 @@ impl SpeedSettings {
   /// This preset is set this way because 8x8 with reduced TX set is faster but with equivalent
   /// or better quality compared to 16x16 (to which reduced TX set does not apply).
   fn partition_range_preset(speed: usize) -> PartitionRange {
-    if speed <= 3 {
+    if speed <= 2 {
       PartitionRange::new(BlockSize::BLOCK_4X4, BlockSize::BLOCK_64X64)
     } else if speed <= 8 {
       PartitionRange::new(BlockSize::BLOCK_8X8, BlockSize::BLOCK_64X64)
