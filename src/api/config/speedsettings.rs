@@ -208,7 +208,7 @@ impl SpeedSettings {
   }
 
   const fn encode_bottomup_preset(speed: usize) -> bool {
-    speed <= 1
+    speed <= 3
   }
 
   /// Set default rdo-lookahead-frames for different speed settings
