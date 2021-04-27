@@ -273,7 +273,7 @@ impl SpeedSettings {
   }
 
   fn segmentation_preset(speed: usize) -> SegmentationLevel {
-    if speed <= 1 {
+    if speed == 0 {
       SegmentationLevel::Full
     } else {
       SegmentationLevel::Simple
