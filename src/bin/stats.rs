@@ -110,6 +110,7 @@ impl ProgressInfo {
 
   pub fn add_frame(&mut self, frame: FrameSummary) {
     self.encoded_size += frame.size;
+    // println!("{:?}", frame);
     self.frame_info.push(frame);
   }
 
