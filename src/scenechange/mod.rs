@@ -85,6 +85,11 @@ impl SceneChangeDetector {
     &mut self, frame_set: &[Arc<Frame<T>>], input_frameno: u64,
     previous_keyframe: u64,
   ) -> bool {
+    if !self.encoder_config.speed_settings.no_scene_detection {
+      let cookie = frame_set[0].planes[0].data_origin()[0];
+      println!("analyze_next_frame frame_set.len={} input_frameno={} previous_keyframe={} self.lookahead_distance={} cookie={}",
+             frame_set.len(), input_frameno, previous_keyframe, self.lookahead_distance, cookie);
+    }
     // Find the distance to the previous keyframe.
     let distance = input_frameno - previous_keyframe;
 

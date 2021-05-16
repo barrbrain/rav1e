@@ -71,6 +71,12 @@ impl Decoder for y4m::Decoder<Box<dyn Read + Send>> {
             bytes,
           );
         }
+        let sum = f.planes[0]
+          .data_origin()
+          .iter()
+          .map(|v| u32::cast_from(*v))
+          .sum::<u32>();
+        f.planes[0].data_origin_mut()[0] = T::cast_from((sum & 0xff) as u8);
         f
       })
       .map_err(Into::into)
