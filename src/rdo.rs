@@ -208,7 +208,7 @@ pub fn ssim_boost(svar: i64, dvar: i64, bit_depth: usize) -> DistortionScale {
 
   //The two constants were tuned for CDEF, but can probably be better tuned for use in general RDO
   DistortionScale::new(
-    (3541_f64 / 8192_f64)
+    (3541_f64 / 16_384_f64)
       * (svar + dvar + (16_384 << (2 * coeff_shift))) as f64
       / f64::sqrt(((12_538_681i64 << (4 * coeff_shift)) + svar * dvar) as f64),
   )
