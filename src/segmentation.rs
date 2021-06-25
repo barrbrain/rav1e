@@ -18,7 +18,6 @@ use crate::FrameState;
 pub fn segmentation_optimize<T: Pixel>(
   fi: &FrameInvariants<T>, fs: &mut FrameState<T>,
 ) {
-  assert!(fi.enable_segmentation);
   fs.segmentation.enabled = true;
 
   if fs.segmentation.enabled {
@@ -81,7 +80,7 @@ pub fn select_segment<T: Pixel>(
   use arrayvec::ArrayVec;
 
   // If skip is true or segmentation is turned off, sidx is not coded.
-  if skip || !fi.enable_segmentation {
+  if skip || !fi.segmentation_enabled() {
     return 0..=0;
   }
 
@@ -97,7 +96,7 @@ pub fn select_segment<T: Pixel>(
   let scale = spatiotemporal_scale(fi, frame_bo, bsize);
 
   // TODO: Replace this calculation with precomputed scale thresholds.
-  let seg_ac_q: ArrayVec<_, 3> = if fi.enable_segmentation {
+  let seg_ac_q: ArrayVec<_, 3> = if fi.segmentation_enabled() {
     use crate::quantize::ac_q;
     (0..=2)
       .map(|sidx| {

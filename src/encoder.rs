@@ -806,10 +806,6 @@ impl<T: Pixel> FrameInvariants<T> {
 
     fi.pyramid_level = inter_cfg.get_level(fi.idx_in_group_output);
 
-    if fi.pyramid_level == 2 {
-      fi.enable_segmentation = false;
-    }
-
     fi.frame_type = if (inter_cfg.switch_frame_interval > 0)
       && (output_frameno_in_gop % inter_cfg.switch_frame_interval == 0)
       && (fi.pyramid_level == 0)
@@ -991,6 +987,11 @@ impl<T: Pixel> FrameInvariants<T> {
   #[inline(always)]
   pub fn sb_size_log2(&self) -> usize {
     self.sequence.tiling.sb_size_log2
+  }
+
+  #[inline(always)]
+  pub fn segmentation_enabled(&self) -> bool {
+    self.enable_segmentation && self.pyramid_level < 2
   }
 }
 
@@ -3488,7 +3489,7 @@ pub fn encode_frame<T: Pixel>(
 
   let mut packet = Vec::new();
 
-  if fi.enable_segmentation {
+  if fi.segmentation_enabled() {
     fs.segmentation = get_initial_segmentation(fi);
     segmentation_optimize(fi, fs);
   }
