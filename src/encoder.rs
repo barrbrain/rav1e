@@ -806,6 +806,10 @@ impl<T: Pixel> FrameInvariants<T> {
 
     fi.pyramid_level = inter_cfg.get_level(fi.idx_in_group_output);
 
+    if fi.pyramid_level == 2 {
+      fi.enable_segmentation = false;
+    }
+
     fi.frame_type = if (inter_cfg.switch_frame_interval > 0)
       && (output_frameno_in_gop % inter_cfg.switch_frame_interval == 0)
       && (fi.pyramid_level == 0)
