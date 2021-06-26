@@ -10,10 +10,14 @@
 use crate::context::*;
 use crate::header::PRIMARY_REF_NONE;
 use crate::partition::BlockSize;
+use crate::quantize::ac_q;
+use crate::rdo::DistortionScale;
 use crate::tiling::TileStateMut;
 use crate::util::Pixel;
 use crate::FrameInvariants;
 use crate::FrameState;
+
+use arrayvec::ArrayVec;
 
 pub fn segmentation_optimize<T: Pixel>(
   fi: &FrameInvariants<T>, fs: &mut FrameState<T>,
@@ -41,18 +45,45 @@ pub fn segmentation_optimize<T: Pixel>(
     // enforcement elsewhere is needed.
     let offset_lower_limit = 1 - fi.base_q_idx as i16;
 
+    let qidx_diffs = [
+      (-TEMPORAL_RDO_QI_DELTA).max(offset_lower_limit),
+      0,
+      TEMPORAL_RDO_QI_DELTA,
+    ];
+
+    let centroids_q24: [i32; 3] = {
+      use crate::rate::{blog64, q57_to_q24};
+      qidx_diffs
+        .iter()
+        .map(|diff| {
+          q57_to_q24(blog64(ac_q(
+            fi.base_q_idx,
+            *diff as i8,
+            fi.sequence.bit_depth,
+          ) as i64))
+        })
+        .collect::<ArrayVec<i32, 3>>()
+        .into_inner()
+        .unwrap()
+    };
+
+    // Precompute the midpoints between selected centroids, in log(scale) form.
+    let thresholds: ArrayVec<_, 2> = centroids_q24
+      .iter()
+      .zip(centroids_q24.iter().skip(1))
+      .map(|(&c1, &c2)| (c1 + c2 + 1) >> 1)
+      // Convert to scale for simple comparisons in `select_segment`.
+      .map(DistortionScale::bexp_q24)
+      .collect();
+
     // Fill in 3 slots with 0, delta, -delta. The slot IDs are also used in
     // luma_chroma_mode_rdo() so if you change things here make sure to check
     // that place too.
-    for i in 0..3 {
+    for (i, &alt_q) in qidx_diffs.iter().enumerate() {
       fs.segmentation.features[i][SegLvl::SEG_LVL_ALT_Q as usize] = true;
-      fs.segmentation.data[i][SegLvl::SEG_LVL_ALT_Q as usize] = match i {
-        0 => 0,
-        1 => TEMPORAL_RDO_QI_DELTA,
-        2 => (-TEMPORAL_RDO_QI_DELTA).max(offset_lower_limit),
-        _ => unreachable!(),
-      };
+      fs.segmentation.data[i][SegLvl::SEG_LVL_ALT_Q as usize] = alt_q;
     }
+    fs.segmentation.thresholds.copy_from_slice(&thresholds);
 
     /* Figure out parameters */
     fs.segmentation.preskip = false;
@@ -78,7 +109,6 @@ pub fn select_segment<T: Pixel>(
 ) -> std::ops::RangeInclusive<u8> {
   use crate::api::SegmentationLevel;
   use crate::rdo::spatiotemporal_scale;
-  use arrayvec::ArrayVec;
 
   // If skip is true or segmentation is turned off, sidx is not coded.
   if skip || !fi.enable_segmentation {
@@ -98,7 +128,6 @@ pub fn select_segment<T: Pixel>(
 
   // TODO: Replace this calculation with precomputed scale thresholds.
   let seg_ac_q: ArrayVec<_, 3> = if fi.enable_segmentation {
-    use crate::quantize::ac_q;
     (0..=2)
       .map(|sidx| {
         ac_q(
