@@ -9,13 +9,7 @@
 
 #![allow(non_upper_case_globals)]
 
-cfg_if::cfg_if! {
-  if #[cfg(nasm_x86_64)] {
-    pub use crate::asm::x86::quantize::*;
-  } else {
-    pub use self::rust::*;
-  }
-}
+pub use self::rust::*;
 
 use crate::transform::{TxSize, TxType};
 use crate::util::*;
@@ -247,7 +241,7 @@ impl QuantizationContext {
     qcoeffs[0] = {
       let coeff: i32 =
         i32::cast_from(coeffs[0]) << (self.log_tx_scale as usize);
-      let abs_coeff = coeff.abs() as u32;
+      let abs_coeff = coeff.abs().min(i16::MAX as i32) as u32;
       T::cast_from(copysign(
         divu_pair(abs_coeff + self.dc_offset, self.dc_mul_add),
         coeff,
@@ -264,8 +258,9 @@ impl QuantizationContext {
     );
     let eob = {
       // We skip the DC coefficient since it has its own quantizer index.
-      let eob_minus_two =
-        scan[1..].iter().rposition(|&i| coeffs[i as usize].abs() >= deadzone);
+      let eob_minus_two = scan[1..].iter().rposition(|&i| {
+        coeffs[i as usize].max(T::cast_from(-i16::MAX)).abs() >= deadzone
+      });
       eob_minus_two.map(|n| n + 2).unwrap_or_else(|| {
         if qcoeffs[0] == T::cast_from(0) {
           0
@@ -288,7 +283,7 @@ impl QuantizationContext {
     let mut level_mode = 1;
     for &pos in scan.iter().take(eob).skip(1) {
       let coeff = i32::cast_from(coeffs[pos as usize]) << self.log_tx_scale;
-      let abs_coeff = coeff.abs() as u32;
+      let abs_coeff = coeff.abs().min(i16::MAX as i32) as u32;
 
       let level0 = divu_pair(abs_coeff, self.ac_mul_add);
       let offset = if level0 > 1 - level_mode {
