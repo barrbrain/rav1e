@@ -48,7 +48,7 @@ pub mod rust {
     }
 
     fn tx_mul(self, mul: (i32, i32)) -> Self {
-      ((self * mul.0) + (1 << mul.1 >> 1)) >> mul.1
+      (self.saturating_mul(mul.0).saturating_add(1 << mul.1 >> 1)) >> mul.1
     }
 
     fn rshift1(self) -> Self {
