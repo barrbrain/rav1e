@@ -1220,7 +1220,8 @@ pub fn encode_tx_block<T: Pixel, W: Writer>(
       }
     }
   }
-  let visible_area = tx_size.width() * visible_tx_h;
+  let visible_area =
+    if visible_tx_w == 0 { 0 } else { tx_size.width() * visible_tx_h };
   for a in residual[visible_area..].iter_mut() {
     *a = 0;
   }
