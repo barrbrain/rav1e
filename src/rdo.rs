@@ -1856,37 +1856,44 @@ fn rdo_partition_simple<T: Pixel, W: Writer>(
     let has_cols = offset.0.x + hbs < ts.mi_width;
     let has_rows = offset.0.y + hbs < ts.mi_height;
 
-    if has_cols && has_rows {
-      let mode_decision =
-        rdo_mode_decision(fi, ts, cw, subsize, offset, inter_cfg);
+    let is_square = subsize.is_sqr();
+    let must_split =
+      is_square && (bsize > fi.partition_range.max || !has_cols || !has_rows);
 
-      rd_cost_sum += mode_decision.rd_cost;
+    let partition_type = match (has_cols, has_rows) {
+      (true, true) => PartitionType::PARTITION_NONE,
+      (true, false) => PartitionType::PARTITION_HORZ,
+      (false, true) => PartitionType::PARTITION_VERT,
+      (false, false) => return None,
+    };
 
-      if fi.enable_early_exit && rd_cost_sum > best_rd {
-        return None;
-      }
-      if subsize >= BlockSize::BLOCK_8X8 && subsize.is_sqr() {
-        let w: &mut W =
-          if cw.bc.cdef_coded { w_post_cdef } else { w_pre_cdef };
-        cw.write_partition(w, offset, PartitionType::PARTITION_NONE, subsize);
-      }
-      encode_block_with_modes(
-        fi,
-        ts,
-        cw,
-        w_pre_cdef,
-        w_post_cdef,
-        subsize,
-        offset,
-        &mode_decision,
-        rdo_type,
-        false,
-      );
-      child_modes.push(mode_decision);
-    } else {
-      //rd_cost_sum += std::f64::MAX;
+    let subsubsize = subsize.subsize(partition_type);
+
+    let mode_decision =
+      rdo_mode_decision(fi, ts, cw, subsubsize, offset, inter_cfg);
+
+    rd_cost_sum += mode_decision.rd_cost;
+
+    if fi.enable_early_exit && rd_cost_sum > best_rd {
       return None;
     }
+    if subsize >= BlockSize::BLOCK_8X8 && subsize.is_sqr() {
+      let w: &mut W = if cw.bc.cdef_coded { w_post_cdef } else { w_pre_cdef };
+      cw.write_partition(w, offset, partition_type, subsize);
+    }
+    encode_block_with_modes(
+      fi,
+      ts,
+      cw,
+      w_pre_cdef,
+      w_post_cdef,
+      subsubsize,
+      offset,
+      &mode_decision,
+      rdo_type,
+      false,
+    );
+    child_modes.push(mode_decision);
   }
 
   Some(cost + rd_cost_sum)

@@ -2685,7 +2685,13 @@ fn encode_partition_topdown<T: Pixel, W: Writer>(
   let partition: PartitionType;
 
   if must_split {
-    partition = PartitionType::PARTITION_SPLIT;
+    partition = if !has_rows && !has_cols {
+      PartitionType::PARTITION_SPLIT
+    } else if has_cols {
+      PartitionType::PARTITION_HORZ
+    } else {
+      PartitionType::PARTITION_VERT
+    };
   } else if can_split {
     debug_assert!(bsize.is_sqr());
     // Blocks of sizes within the supported range are subjected to a partitioning decision
