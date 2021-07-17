@@ -1791,15 +1791,25 @@ pub fn get_sub_partitions(
 }
 
 #[inline(always)]
-fn rdo_partition_none<T: Pixel>(
+fn rdo_partition_none<T: Pixel, W: Writer>(
   fi: &FrameInvariants<T>, ts: &mut TileStateMut<'_, T>,
-  cw: &mut ContextWriter, bsize: BlockSize, tile_bo: TileBlockOffset,
-  inter_cfg: &InterConfig, child_modes: &mut ArrayVec<PartitionParameters, 4>,
+  cw: &mut ContextWriter, w_pre_cdef: &mut W, w_post_cdef: &mut W,
+  bsize: BlockSize, tile_bo: TileBlockOffset, inter_cfg: &InterConfig,
+  child_modes: &mut ArrayVec<PartitionParameters, 4>,
 ) -> f64 {
   debug_assert!(tile_bo.0.x < ts.mi_width && tile_bo.0.y < ts.mi_height);
 
+  let mut cost = if bsize >= BlockSize::BLOCK_8X8 {
+    let w: &mut W = if cw.bc.cdef_coded { w_post_cdef } else { w_pre_cdef };
+    let tell = w.tell_frac();
+    cw.write_partition(w, tile_bo, PartitionType::PARTITION_NONE, bsize);
+    compute_rd_cost(fi, w.tell_frac() - tell, ScaledDistortion::zero())
+  } else {
+    0.0
+  };
+
   let mode = rdo_mode_decision(fi, ts, cw, bsize, tile_bo, inter_cfg);
-  let cost = mode.rd_cost;
+  cost += mode.rd_cost;
 
   child_modes.push(mode);
 
@@ -1879,7 +1889,10 @@ fn rdo_partition_simple<T: Pixel, W: Writer>(
     }
     if subsize >= BlockSize::BLOCK_8X8 && subsize.is_sqr() {
       let w: &mut W = if cw.bc.cdef_coded { w_post_cdef } else { w_pre_cdef };
+      let tell = w.tell_frac();
       cw.write_partition(w, offset, partition_type, subsize);
+      rd_cost_sum +=
+        compute_rd_cost(fi, w.tell_frac() - tell, ScaledDistortion::zero());
     }
     encode_block_with_modes(
       fi,
@@ -1929,6 +1942,8 @@ pub fn rdo_partition_decision<T: Pixel, W: Writer>(
           fi,
           ts,
           cw,
+          w_pre_cdef,
+          w_post_cdef,
           bsize,
           tile_bo,
           inter_cfg,
