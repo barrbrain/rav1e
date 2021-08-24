@@ -75,7 +75,7 @@ const DQP_Q57: &[i64; FRAME_NSUBTYPES] = &[
   (-(33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
   (0.0 * (1i64 << 57) as f64) as i64,
   ((33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
-  ((33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
+  (1.5 * (33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
 ];
 
 // For 8-bit-depth inter frames, log_q_y is derived from log_target_q with a
