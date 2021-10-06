@@ -357,6 +357,74 @@ impl<T: Pixel> Plane<T> {
     }
   }
 
+  pub fn pad_lfe(&mut self, w: usize, h: usize) {
+    let xorigin = self.cfg.xorigin;
+    let yorigin = self.cfg.yorigin;
+    let stride = self.cfg.stride;
+    let alloc_height = self.cfg.alloc_height;
+    let width = (w + self.cfg.xdec) >> self.cfg.xdec;
+    let height = (h + self.cfg.ydec) >> self.cfg.ydec;
+
+    let lfe = |a: T, b: T, c: T| {
+      T::cast_from(
+        ((u16::cast_from(b) << 1) + u16::cast_from(a) + u16::cast_from(c) + 2)
+          >> 2,
+      )
+    };
+
+    if xorigin > 0 {
+      for x in (0..xorigin).rev() {
+        for y in 0..height {
+          let base = (yorigin + y) * stride + x + 1;
+          self.data[base - 1] = lfe(
+            self.data[if y > 0 { base - stride } else { base }],
+            self.data[base],
+            self.data[if y + 1 < height { base + stride } else { base }],
+          );
+        }
+      }
+    }
+
+    if xorigin + width < stride {
+      for x in (xorigin + width)..stride {
+        for y in 0..height {
+          let base = (yorigin + y) * stride + x - 1;
+          self.data[base + 1] = lfe(
+            self.data[if y > 0 { base - stride } else { base }],
+            self.data[base],
+            self.data[if y + 1 < height { base + stride } else { base }],
+          );
+        }
+      }
+    }
+
+    if yorigin > 0 {
+      for y in (0..yorigin).rev() {
+        for x in 0..stride {
+          let base = (y + 1) * stride + x;
+          self.data[base - stride] = lfe(
+            self.data[if x > 0 { base - 1 } else { base }],
+            self.data[base],
+            self.data[if x + 1 < width { base + 1 } else { base }],
+          );
+        }
+      }
+    }
+
+    if yorigin + height < alloc_height {
+      for y in (yorigin + height)..alloc_height {
+        for x in 0..stride {
+          let base = (y - 1) * stride + x;
+          self.data[base + stride] = lfe(
+            self.data[if x > 0 { base - 1 } else { base }],
+            self.data[base],
+            self.data[if x + 1 < width { base + 1 } else { base }],
+          );
+        }
+      }
+    }
+  }
+
   pub fn slice(&self, po: PlaneOffset) -> PlaneSlice<'_, T> {
     PlaneSlice { plane: self, x: po.x, y: po.y }
   }
@@ -1137,6 +1205,53 @@ pub mod test {
       },
     };
     plane.pad(4, 4);
+
+    #[rustfmt::skip]
+    assert_eq!(
+      &[
+        1, 1, 1, 2, 3, 4, 4, 4,
+        1, 1, 1, 2, 3, 4, 4, 4,
+        1, 1, 1, 2, 3, 4, 4, 4,
+        1, 1, 1, 2, 3, 4, 4, 4,
+        8, 8, 8, 7, 6, 5, 5, 5,
+        9, 9, 9, 8, 7, 6, 6, 6,
+        2, 2, 2, 3, 4, 5, 5, 5,
+        2, 2, 2, 3, 4, 5, 5, 5,
+        2, 2, 2, 3, 4, 5, 5, 5,
+      ][..],
+      &plane.data[..]
+    );
+  }
+
+  #[test]
+  fn test_plane_pad_lfe() {
+    #[rustfmt::skip]
+    let mut plane = Plane::<u8> {
+      data: PlaneData::from_slice(&[
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 2, 3, 4, 0, 0,
+        0, 0, 8, 7, 6, 5, 0, 0,
+        0, 0, 9, 8, 7, 6, 0, 0,
+        0, 0, 2, 3, 4, 5, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+      ]),
+      cfg: PlaneConfig {
+        stride: 8,
+        alloc_height: 9,
+        width: 4,
+        height: 4,
+        xdec: 0,
+        ydec: 0,
+        xpad: 0,
+        ypad: 0,
+        xorigin: 2,
+        yorigin: 3,
+      },
+    };
+    plane.pad_lfe(4, 4);
 
     #[rustfmt::skip]
     assert_eq!(
