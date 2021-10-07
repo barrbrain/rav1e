@@ -1051,6 +1051,31 @@ fn diff<T: Pixel>(
   }
 }
 
+/// Write into `dst` the difference between the blocks at `src1` and `src2`
+/// with src1 padded by simple extension.
+fn diff_padded<T: Pixel>(
+  dst: &mut [i16], src1: &PlaneRegion<'_, T>, src2: &PlaneRegion<'_, T>,
+  width: usize, height: usize, visible_width: usize, visible_height: usize,
+) {
+  let mut padded_row: Aligned<[T; 64]> = Aligned::uninitialized();
+  for (((row, l), s1), s2) in dst
+    .chunks_mut(width)
+    .enumerate()
+    .take(height)
+    .zip(src1.rows_iter())
+    .zip(src2.rows_iter())
+  {
+    if row < visible_height {
+      padded_row.data[..visible_width].copy_from_slice(&s1[..visible_width]);
+      padded_row.data[visible_width..width].fill(s1[visible_width - 1]);
+    }
+    let s1 = &padded_row.data[..width];
+    for ((r, v1), v2) in l.iter_mut().zip(s1).zip(s2) {
+      *r = i16::cast_from(*v1) - i16::cast_from(*v2);
+    }
+  }
+}
+
 fn get_qidx<T: Pixel>(
   fi: &FrameInvariants<T>, ts: &TileStateMut<'_, T>, cw: &ContextWriter,
   tile_bo: TileBlockOffset,
@@ -1190,26 +1215,29 @@ pub fn encode_tx_block<T: Pixel, W: Writer>(
     (frame_bo.0.y << MI_SIZE_LOG2) >> ydec,
   );
 
-  if visible_tx_w != 0 && visible_tx_h != 0 {
+  let padded =
+    visible_tx_w != tx_size.width() || visible_tx_h != tx_size.height();
+
+  if visible_tx_w == 0 || visible_tx_h == 0 {
+    residual.fill(0);
+  } else if padded {
+    diff_padded(
+      residual,
+      &ts.input_tile.planes[p].subregion(area),
+      &rec.subregion(area),
+      tx_size.width(),
+      tx_size.height(),
+      visible_tx_w,
+      visible_tx_h,
+    );
+  } else {
     diff(
       residual,
       &ts.input_tile.planes[p].subregion(area),
       &rec.subregion(area),
       tx_size.width(),
-      visible_tx_h,
+      tx_size.height(),
     );
-    if visible_tx_w < tx_size.width() {
-      for row in residual.chunks_mut(tx_size.width()).take(visible_tx_h) {
-        for a in &mut row[visible_tx_w..] {
-          *a = 0;
-        }
-      }
-    }
-  }
-  let initialized_area =
-    if visible_tx_w == 0 { 0 } else { tx_size.width() * visible_tx_h };
-  for a in residual[initialized_area..].iter_mut() {
-    *a = 0;
   }
 
   forward_transform(
