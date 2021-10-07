@@ -1150,8 +1150,11 @@ impl<T: Pixel> ContextInner<T> {
       if self.config.tune == Tune::Psychovisual {
         let frame =
           self.frame_q[&frame_data.fi.input_frameno].as_ref().unwrap();
-        frame_data.fi.activity_mask =
-          ActivityMask::from_plane(&frame.planes[0]);
+        frame_data.fi.activity_mask = ActivityMask::from_plane(
+          &frame.planes[0],
+          frame_data.fi.width,
+          frame_data.fi.height,
+        );
         frame_data.fi.activity_mask.fill_scales(
           frame_data.fi.sequence.bit_depth,
           &mut frame_data.fi.activity_scales,
