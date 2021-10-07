@@ -1208,8 +1208,8 @@ pub fn encode_tx_block<T: Pixel, W: Writer>(
   let rcoeffs = &mut rcoeffs_storage.data[..coded_tx_area];
 
   let (visible_tx_w, visible_tx_h) = clip_visible_bsize(
-    fi.width >> xdec,
-    fi.height >> ydec,
+    (fi.width + xdec) >> xdec,
+    (fi.height + ydec) >> ydec,
     tx_size.block_size(),
     (frame_bo.0.x << MI_SIZE_LOG2) >> xdec,
     (frame_bo.0.y << MI_SIZE_LOG2) >> ydec,
