@@ -120,6 +120,7 @@ fn variance_8x8_padded<T: Pixel>(src: &PlaneRegion<'_, T>) -> u32 {
       row[..width].copy_from_slice(&src[j][..width]);
       row[width..].fill(src[j][width - 1]);
     }
+    assert_eq!(&row[..], &src[j][..8]);
     for (sum_s, sum_s2, s) in izip!(&mut sum_s_cols, &mut sum_s2_cols, &row) {
       // Don't convert directly to u32 to allow better vectorization
       let s: u16 = u16::cast_from(*s);

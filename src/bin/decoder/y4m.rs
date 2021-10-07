@@ -70,7 +70,10 @@ impl Decoder for y4m::Decoder<Box<dyn Read + Send>> {
             chroma_width * bytes,
             bytes,
           );
+          f.planes[1].pad(cfg.width, cfg.height);
+          f.planes[2].pad(cfg.width, cfg.height);
         }
+        f.planes[0].pad(cfg.width, cfg.height);
         f
       })
       .map_err(Into::into)

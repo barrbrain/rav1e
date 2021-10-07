@@ -1069,6 +1069,7 @@ fn diff_padded<T: Pixel>(
       padded_row.data[..visible_width].copy_from_slice(&s1[..visible_width]);
       padded_row.data[visible_width..width].fill(s1[visible_width - 1]);
     }
+    assert_eq!(&s1[..width], &padded_row.data[..width]);
     let s1 = &padded_row.data[..width];
     for ((r, v1), v2) in l.iter_mut().zip(s1).zip(s2) {
       *r = i16::cast_from(*v1) - i16::cast_from(*v2);
