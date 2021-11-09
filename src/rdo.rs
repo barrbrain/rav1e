@@ -270,16 +270,18 @@ fn apply_ssim_boost(
   let svar = (svar >> (2 * coeff_shift)) as u64;
   let dvar = (dvar >> (2 * coeff_shift)) as u64;
 
-  // The two constants were tuned for CDEF, but can probably be better tuned
-  //   for use in general RDO
-  const C1: u64 = 4033;
+  // The constants are such that when source and destination variance are equal,
+  // ssim_boost ~= (x/2)^(-1/3) where x = variance / scale and the scale is the
+  // nearest power of 2 to (maximum variance >> 8).
+  const C1: u64 = 3530;
   const C2: u64 = 16384;
+  const C3: u64 = 13004;
   const RATIO_SHIFT: u8 = 14;
-  const RATIO: u64 = (((C1 << (RATIO_SHIFT + 1)) / C2) + 1) >> 1;
+  const RATIO: u64 = (((C1 << (RATIO_SHIFT + 1)) / C3) + 1) >> 1;
 
   //          C1        (svar + dvar + C2)
   // input * ---- * --------------------------
-  //          C2     sqrt(C1^2 + svar * dvar)
+  //          C3     sqrt(C1^2 + svar * dvar)
   let rsqrt = ssim_boost_rsqrt((C1 * C1) + svar * dvar);
   ((input as u64
     * (((RATIO * (svar + dvar + C2) as u64) * rsqrt.norm as u64)
@@ -310,9 +312,10 @@ mod ssim_boost_tests {
     let dvar = dvar as f64 * var_scale;
     // These constants are from ssim boost and need to be updated if the
     //  constants in ssim boost change.
-    const C1: f64 = 4033f64;
+    const C1: f64 = 3530f64;
     const C2: f64 = 16384f64;
-    const RATIO: f64 = C1 / C2;
+    const C3: f64 = 13004f64;
+    const RATIO: f64 = C1 / C3;
 
     RATIO * (svar + dvar + C2) / f64::sqrt(C1 * C1 + svar * dvar)
   }
@@ -344,6 +347,29 @@ mod ssim_boost_tests {
 
     assert!(
       max_relative_error < 0.05,
+      "SSIM boost error too high. Measured max relative error: {}.",
+      max_relative_error
+    );
+  }
+
+  #[test]
+  fn reciprocal_cube_root_test() {
+    let mut max_relative_error = 0f64;
+    let bd = 8;
+
+    let scale = bd * 2 - 8 + 3 * 2 - 2;
+    for svar in (1 << scale)..(1 << (scale + 2)) {
+      let float = ((1 << (scale + 1)) as f64 / svar as f64).cbrt();
+      let fixed =
+        apply_ssim_boost(1 << 23, svar, svar, bd) as f64 / (1 << 23) as f64;
+
+      // Compare the two versions
+      max_relative_error =
+        max_relative_error.max(f64::abs(1f64 - fixed / float));
+    }
+
+    assert!(
+      max_relative_error < 0.027,
       "SSIM boost error too high. Measured max relative error: {}.",
       max_relative_error
     );
