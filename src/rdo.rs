@@ -355,24 +355,30 @@ mod ssim_boost_tests {
 
   #[test]
   fn reciprocal_cube_root_test() {
-    let mut max_relative_error = 0f64;
-    let bd = 8;
+    let mut min_max_relative_error = 1f64;
+    for C1 in 3072..5120 {
+      let mut max_relative_error = 0f64;
+      let bd = 8;
 
-    let scale = bd * 2 - 8 + 3 * 2 - 2;
-    for svar in (1 << scale)..(1 << (scale + 2)) {
-      let float = ((1 << (scale + 1)) as f64 / svar as f64).cbrt();
-      let fixed =
-        apply_ssim_boost(1 << 23, svar, svar, bd, 3530) as f64 / (1 << 23) as f64;
+      let scale = bd * 2 - 8 + 3 * 2 - 2;
+      for svar in (1 << scale)..(1 << (scale + 2)) {
+        let float = ((1 << (scale + 1)) as f64 / svar as f64).cbrt();
+        let fixed =
+          apply_ssim_boost(1 << 23, svar, svar, bd, C1) as f64 / (1 << 23) as f64;
 
-      // Compare the two versions
-      max_relative_error =
-        max_relative_error.max(f64::abs(1f64 - fixed / float));
+        // Compare the two versions
+        max_relative_error =
+          max_relative_error.max(f64::abs(1f64 - fixed / float));
+      }
+      if max_relative_error <= min_max_relative_error {
+        println!("{} {}", C1, max_relative_error);
+        min_max_relative_error = max_relative_error;
+      }
     }
-
     assert!(
-      max_relative_error < 0.027,
+      min_max_relative_error < 0.027,
       "SSIM boost error too high. Measured max relative error: {}.",
-      max_relative_error
+      min_max_relative_error
     );
   }
 }
