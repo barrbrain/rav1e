@@ -31,10 +31,6 @@ pub fn segmentation_optimize<T: Pixel>(
       return;
     }
 
-    // A series of AWCY runs with deltas 13, 15, 17, 18, 19, 20, 21, 22, 23
-    // showed this to be the optimal one.
-    const TEMPORAL_RDO_QI_DELTA: i16 = 21;
-
     // Avoid going into lossless mode by never bringing qidx below 1.
     // Because base_q_idx changes more frequently than the segmentation
     // data, it is still possible for a segment to enter lossless, so
@@ -48,8 +44,8 @@ pub fn segmentation_optimize<T: Pixel>(
       fs.segmentation.features[i][SegLvl::SEG_LVL_ALT_Q as usize] = true;
       fs.segmentation.data[i][SegLvl::SEG_LVL_ALT_Q as usize] = match i {
         0 => 0,
-        1 => TEMPORAL_RDO_QI_DELTA,
-        2 => (-TEMPORAL_RDO_QI_DELTA).max(offset_lower_limit),
+        1 => 13,
+        2 => (-8).max(offset_lower_limit),
         _ => unreachable!(),
       };
     }
