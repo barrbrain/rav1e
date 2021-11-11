@@ -44,8 +44,8 @@ pub fn segmentation_optimize<T: Pixel>(
       fs.segmentation.features[i][SegLvl::SEG_LVL_ALT_Q as usize] = true;
       fs.segmentation.data[i][SegLvl::SEG_LVL_ALT_Q as usize] = match i {
         0 => 0,
-        1 => 13,
-        2 => (-8).max(offset_lower_limit),
+        1 => 14,
+        2 => (-9).max(offset_lower_limit),
         _ => unreachable!(),
       };
     }
