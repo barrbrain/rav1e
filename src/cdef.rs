@@ -398,7 +398,7 @@ pub fn cdef_filter_superblock<T: Pixel>(
   fi: &FrameInvariants<T>, input: &Frame<T>, output: &mut TileMut<'_, T>,
   blocks: &TileBlocks<'_>, tile_sbo: TileSuperBlockOffset, cdef_index: u8,
   cdef_dirs: &CdefDirections,
-) {
+) -> bool {
   let bit_depth = fi.sequence.bit_depth;
   let coeff_shift = fi.sequence.bit_depth as i32 - 8;
   let cdef_damping = fi.cdef_damping as i32;
@@ -441,6 +441,8 @@ pub fn cdef_filter_superblock<T: Pixel>(
     if tile_sbo.0.x as isize + tile_rect.x > 0 { CDEF_HAVE_LEFT } else { 0 };
   let mut edges = have_top_p | CDEF_HAVE_BOTTOM;
 
+  let mut all_skip = true;
+
   // Each direction block is 8x8 in y, potentially smaller if subsampled in chroma
   for by in 0..8usize {
     if by + 1 >= (input_yavail as usize >> 3) {
@@ -482,6 +484,7 @@ pub fn cdef_filter_superblock<T: Pixel>(
           });
 
           if !skip {
+            all_skip = false;
             let local_pri_strength;
             let local_sec_strength;
             let mut local_damping: i32 = cdef_damping + coeff_shift;
@@ -560,6 +563,8 @@ pub fn cdef_filter_superblock<T: Pixel>(
     }
     edges |= CDEF_HAVE_TOP;
   }
+
+  return all_skip;
 }
 
 // The purpose of CDEF is to perform deringing based on the detected

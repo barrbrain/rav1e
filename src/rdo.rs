@@ -2390,6 +2390,9 @@ pub fn rdo_loop_decision<T: Pixel, W: Writer>(
   // Limit iterations and where we break based on speed setting (in the TODO list ;-)
   let mut cdef_change = true;
   let mut lrf_change = true;
+  let mut all_skip = true;
+  let mut cdef_process = false;
+
   while cdef_change || lrf_change {
     // search for improved cdef indices, superblock by superblock, if cdef is enabled.
     if let (Some((rec_copy, cdef_dirs)), Some(cdef_ref)) =
@@ -2411,7 +2414,8 @@ pub fn rdo_loop_decision<T: Pixel, W: Writer>(
             let mut err = ScaledDistortion::zero();
             let mut rate = 0;
 
-            cdef_filter_superblock(
+            cdef_process = true;
+            all_skip &= cdef_filter_superblock(
               fi,
               &rec_subset,
               &mut cdef_ref.as_tile_mut(),
@@ -2585,6 +2589,9 @@ pub fn rdo_loop_decision<T: Pixel, W: Writer>(
     if !cdef_change {
       break;
     }
+    if cdef_process && all_skip {
+      break;
+    }
     cdef_change = false;
     lrf_change = false;
 
@@ -2754,6 +2761,10 @@ pub fn rdo_loop_decision<T: Pixel, W: Writer>(
       }
     }
   }
+  // if !all_skip && cdef_process {
+  //   println!("{}", lrf_ever_change);
+  //   //assert!(!all_skip)
+  // }
 }
 
 #[test]
