@@ -441,7 +441,7 @@ pub fn cdef_filter_superblock<T: Pixel>(
     if tile_sbo.0.x as isize + tile_rect.x > 0 { CDEF_HAVE_LEFT } else { 0 };
   let mut edges = have_top_p | CDEF_HAVE_BOTTOM;
 
-  let mut all_skip = true;
+  let mut _all_skip = true;
 
   // Each direction block is 8x8 in y, potentially smaller if subsampled in chroma
   for by in 0..8usize {
@@ -484,7 +484,7 @@ pub fn cdef_filter_superblock<T: Pixel>(
           });
 
           if !skip {
-            all_skip = false;
+            _all_skip = false;
             let local_pri_strength;
             let local_sec_strength;
             let mut local_damping: i32 = cdef_damping + coeff_shift;
@@ -564,7 +564,7 @@ pub fn cdef_filter_superblock<T: Pixel>(
     edges |= CDEF_HAVE_TOP;
   }
 
-  return all_skip;
+  return true;
 }
 
 // The purpose of CDEF is to perform deringing based on the detected
