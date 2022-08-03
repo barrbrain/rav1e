@@ -1319,6 +1319,8 @@ impl<T: Pixel> ContextInner<T> {
       );
       frame_data.fi.set_quantizers(&qps);
 
+      let mut inv_mean = 1.0f64;
+
       if let Some(coded_data) = frame_data.fi.coded_frame_data.as_mut() {
         if self.config.tune == Tune::Psychovisual {
           let frame =
@@ -1329,7 +1331,14 @@ impl<T: Pixel> ContextInner<T> {
             frame_data.fi.sequence.bit_depth,
             &mut coded_data.activity_scales,
           );
-          frame_data.fi.compute_spatiotemporal_scores();
+          inv_mean = frame_data.fi.compute_spatiotemporal_scores();
+          frame_data.fi.lambda *= inv_mean;
+          frame_data.fi.me_lambda = frame_data.fi.lambda.sqrt();
+          use crate::quantize::{ac_q, select_ac_qi};
+          let bd = frame_data.fi.sequence.bit_depth;
+          let q = ac_q(frame_data.fi.base_q_idx, 0, bd) as f64;
+          let q2 = q.mul_add(inv_mean.sqrt(), 0.5) as i64;
+          frame_data.fi.base_q_idx = select_ac_qi(q2, bd).max(1);
         } else {
           coded_data.activity_mask = ActivityMask::default();
         }
@@ -1354,6 +1363,13 @@ impl<T: Pixel> ContextInner<T> {
           self.maybe_prev_log_base_q,
         );
         frame_data.fi.set_quantizers(&qps);
+        frame_data.fi.lambda *= inv_mean;
+        frame_data.fi.me_lambda = frame_data.fi.lambda.sqrt();
+        use crate::quantize::{ac_q, select_ac_qi};
+        let bd = frame_data.fi.sequence.bit_depth;
+        let q = ac_q(frame_data.fi.base_q_idx, 0, bd) as f64;
+        let q2 = q.mul_add(inv_mean.sqrt(), 0.5) as i64;
+        frame_data.fi.base_q_idx = select_ac_qi(q2, bd).max(1);
       }
 
       let data =
