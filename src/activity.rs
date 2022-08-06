@@ -163,8 +163,8 @@ pub fn apply_ssim_boost(
   let coeff_shift = bit_depth - 8;
 
   // Scale dvar and svar to lbd range to prevent overflows.
-  let svar = (svar >> (2 * coeff_shift)) as u64;
-  let dvar = (dvar >> (2 * coeff_shift)) as u64;
+  let svar = (svar >> coeff_shift) as u64;
+  let dvar = (dvar >> coeff_shift) as u64;
 
   // The constants are such that when source and destination variance are equal,
   // ssim_boost ~= (x/2)^(-1/3) where x = variance / scale and the scale is
@@ -206,7 +206,7 @@ mod ssim_boost_tests {
   /// Floating point reference version of `ssim_boost`
   fn reference_ssim_boost(svar: u32, dvar: u32, bit_depth: usize) -> f64 {
     let coeff_shift = bit_depth - 8;
-    let var_scale = 1f64 / (1 << (2 * coeff_shift)) as f64;
+    let var_scale = 1f64 / (1 << coeff_shift) as f64;
     let svar = svar as f64 * var_scale;
     let dvar = dvar as f64 * var_scale;
     // These constants are from ssim boost and need to be updated if the
@@ -257,7 +257,7 @@ mod ssim_boost_tests {
   fn reciprocal_cube_root_test(bd: usize) {
     let mut max_relative_error = 0f64;
 
-    let scale = ((1 << bd) - 1) << (6 - 2 + bd - 8);
+    let scale = ((1 << bd) - 1) << (6 - 2);
     for svar in scale..(scale << 2) {
       let float = ((scale << 1) as f64 / svar as f64).cbrt();
       let fixed =
