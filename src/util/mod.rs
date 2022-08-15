@@ -10,6 +10,7 @@
 mod align;
 #[macro_use]
 mod cdf;
+mod kmeans;
 mod uninit;
 
 pub use v_frame::math::*;
