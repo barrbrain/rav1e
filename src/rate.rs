@@ -747,13 +747,16 @@ impl RCState {
       let chroma_sampling = ctx.config.chroma_sampling;
       let (log_base_q, log_q) =
         Self::calc_flat_quantizer(ctx.config.quantizer as u8, bit_depth, fti);
+      let (_, log_max_q) = Self::calc_flat_quantizer(
+        ctx.config.quantizer as u8, bit_depth, FRAME_SUBTYPE_B1,
+      );
       QuantizerParameters::new_from_log_q(
         log_base_q,
-        log_q,
+        log_q.max(log_max_q + log_isqrt_mean_scale),
         bit_depth,
         chroma_sampling,
         fti == 0,
-        log_isqrt_mean_scale,
+        0,
       )
     } else {
       let mut nframes: [i32; FRAME_NSUBTYPES + 1] = [0; FRAME_NSUBTYPES + 1];
