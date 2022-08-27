@@ -610,12 +610,13 @@ pub fn estimate_motion<T: Pixel>(
           w,
           h,
           best.mv,
+          ssdec,
         );
       }
 
       sub_pixel_me(
         fi, po, org_region, p_ref, lambda, pmv, mvx_min, mvx_max, mvy_min,
-        mvy_max, w, h, use_satd, &mut best, ref_frame,
+        mvy_max, w, h, use_satd, &mut best, ref_frame, ssdec,
       );
     }
 
@@ -676,6 +677,7 @@ fn refine_subsampled_motion_estimate<T: Pixel>(
     let y_hi = po.y + (mv.row as isize / 8 + 2).min(mvy_max / 8);
     let mut results = full_search(
       fi, x_lo, x_hi, y_lo, y_hi, w, h, org_region, p_ref, po, 1, lambda, pmv,
+      ssdec,
     );
 
     // Scale motion vectors to full res size
@@ -732,6 +734,7 @@ fn full_pixel_me<T: Pixel>(
       mvy_max,
       w,
       h,
+      ssdec,
     );
     fullpel_diamond_search(
       fi,
@@ -748,6 +751,7 @@ fn full_pixel_me<T: Pixel>(
       mvy_max,
       w,
       h,
+      ssdec,
     );
 
     if results.rd.cost < best.rd.cost {
@@ -807,6 +811,7 @@ fn full_pixel_me<T: Pixel>(
       h,
       // Use 24, since it is the largest range that x264 uses.
       24,
+      ssdec,
     );
 
     if !fi.config.speed_settings.motion.me_allow_full_search
@@ -841,6 +846,7 @@ fn full_pixel_me<T: Pixel>(
         4 >> ssdec,
         lambda,
         [MotionVector::default(); 2],
+        ssdec,
       );
 
       if results.rd.cost < best.rd.cost {
@@ -857,6 +863,7 @@ fn sub_pixel_me<T: Pixel>(
   p_ref: &Plane<T>, lambda: u32, pmv: [MotionVector; 2], mvx_min: isize,
   mvx_max: isize, mvy_min: isize, mvy_max: isize, w: usize, h: usize,
   use_satd: bool, best: &mut MotionSearchResult, ref_frame: RefType,
+  ssdec: u8,
 ) {
   subpel_diamond_search(
     fi,
@@ -875,6 +882,7 @@ fn sub_pixel_me<T: Pixel>(
     use_satd,
     best,
     ref_frame,
+    ssdec,
   );
 }
 
@@ -882,14 +890,14 @@ fn get_best_predictor<T: Pixel>(
   fi: &FrameInvariants<T>, po: PlaneOffset, org_region: &PlaneRegion<T>,
   p_ref: &Plane<T>, predictors: &[MotionVector], bit_depth: usize,
   pmv: [MotionVector; 2], lambda: u32, mvx_min: isize, mvx_max: isize,
-  mvy_min: isize, mvy_max: isize, w: usize, h: usize,
+  mvy_min: isize, mvy_max: isize, w: usize, h: usize, ssdec: u8,
 ) -> MotionSearchResult {
   let mut best: MotionSearchResult = MotionSearchResult::empty();
 
   for &init_mv in predictors.iter() {
     let rd = get_fullpel_mv_rd(
       fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-      mvx_max, mvy_min, mvy_max, w, h, init_mv,
+      mvx_max, mvy_min, mvy_max, w, h, init_mv, ssdec,
     );
 
     if rd.cost < best.rd.cost {
@@ -952,7 +960,7 @@ fn fullpel_diamond_search<T: Pixel>(
   fi: &FrameInvariants<T>, po: PlaneOffset, org_region: &PlaneRegion<T>,
   p_ref: &Plane<T>, current: &mut MotionSearchResult, bit_depth: usize,
   pmv: [MotionVector; 2], lambda: u32, mvx_min: isize, mvx_max: isize,
-  mvy_min: isize, mvy_max: isize, w: usize, h: usize,
+  mvy_min: isize, mvy_max: isize, w: usize, h: usize, ssdec: u8,
 ) {
   // Define the initial and the final scale (log2) of the diamond.
   let (mut diamond_radius_log2, diamond_radius_end_log2) = (1u8, 0u8);
@@ -964,7 +972,7 @@ fn fullpel_diamond_search<T: Pixel>(
       let cand_mv = current.mv + (offset << diamond_radius_log2);
       let rd = get_fullpel_mv_rd(
         fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-        mvx_max, mvy_min, mvy_max, w, h, cand_mv,
+        mvx_max, mvy_min, mvy_max, w, h, cand_mv, ssdec,
       );
 
       if rd.cost < best_cand.rd.cost {
@@ -1051,7 +1059,7 @@ fn hexagon_search<T: Pixel>(
   fi: &FrameInvariants<T>, po: PlaneOffset, org_region: &PlaneRegion<T>,
   p_ref: &Plane<T>, current: &mut MotionSearchResult, bit_depth: usize,
   pmv: [MotionVector; 2], lambda: u32, mvx_min: isize, mvx_max: isize,
-  mvy_min: isize, mvy_max: isize, w: usize, h: usize,
+  mvy_min: isize, mvy_max: isize, w: usize, h: usize, ssdec: u8,
 ) {
   // The first iteration of hexagon search is implemented separate from
   // subsequent iterations, which overlap with previous iterations.
@@ -1067,7 +1075,7 @@ fn hexagon_search<T: Pixel>(
     let cand_mv = current.mv + HEXAGON_PATTERN[i];
     let rd = get_fullpel_mv_rd(
       fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-      mvx_max, mvy_min, mvy_max, w, h, cand_mv,
+      mvx_max, mvy_min, mvy_max, w, h, cand_mv, ssdec,
     );
 
     if rd.cost < best_cand.rd.cost {
@@ -1099,7 +1107,7 @@ fn hexagon_search<T: Pixel>(
 
       let rd = get_fullpel_mv_rd(
         fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-        mvx_max, mvy_min, mvy_max, w, h, cand_mv,
+        mvx_max, mvy_min, mvy_max, w, h, cand_mv, ssdec,
       );
 
       if rd.cost < best_cand.rd.cost {
@@ -1116,7 +1124,7 @@ fn hexagon_search<T: Pixel>(
     let cand_mv = current.mv + offset;
     let rd = get_fullpel_mv_rd(
       fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-      mvx_max, mvy_min, mvy_max, w, h, cand_mv,
+      mvx_max, mvy_min, mvy_max, w, h, cand_mv, ssdec,
     );
 
     if rd.cost < best_cand.rd.cost {
@@ -1166,6 +1174,7 @@ fn uneven_multi_hex_search<T: Pixel>(
   p_ref: &Plane<T>, current: &mut MotionSearchResult, bit_depth: usize,
   pmv: [MotionVector; 2], lambda: u32, mvx_min: isize, mvx_max: isize,
   mvy_min: isize, mvy_max: isize, w: usize, h: usize, me_range: i16,
+  ssdec: u8,
 ) {
   assert!(!current.is_empty());
 
@@ -1196,7 +1205,7 @@ fn uneven_multi_hex_search<T: Pixel>(
       let cand_mv = center + offset * i;
       let rd = get_fullpel_mv_rd(
         fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-        mvx_max, mvy_min, mvy_max, w, h, cand_mv,
+        mvx_max, mvy_min, mvy_max, w, h, cand_mv, ssdec,
       );
 
       if rd.cost < current.rd.cost {
@@ -1217,7 +1226,7 @@ fn uneven_multi_hex_search<T: Pixel>(
       let cand_mv = center + offset * i;
       let rd = get_fullpel_mv_rd(
         fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-        mvx_max, mvy_min, mvy_max, w, h, cand_mv,
+        mvx_max, mvy_min, mvy_max, w, h, cand_mv, ssdec,
       );
 
       if rd.cost < current.rd.cost {
@@ -1237,7 +1246,7 @@ fn uneven_multi_hex_search<T: Pixel>(
       let cand_mv = center + MotionVector { row, col };
       let rd = get_fullpel_mv_rd(
         fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-        mvx_max, mvy_min, mvy_max, w, h, cand_mv,
+        mvx_max, mvy_min, mvy_max, w, h, cand_mv, ssdec,
       );
 
       if rd.cost < current.rd.cost {
@@ -1279,7 +1288,7 @@ fn uneven_multi_hex_search<T: Pixel>(
       let cand_mv = center + offset * i;
       let rd = get_fullpel_mv_rd(
         fi, po, org_region, p_ref, bit_depth, pmv, lambda, false, mvx_min,
-        mvx_max, mvy_min, mvy_max, w, h, cand_mv,
+        mvx_max, mvy_min, mvy_max, w, h, cand_mv, ssdec,
       );
 
       if rd.cost < current.rd.cost {
@@ -1292,7 +1301,7 @@ fn uneven_multi_hex_search<T: Pixel>(
   // Refine the search results using a 'normal' hexagon search.
   hexagon_search(
     fi, po, org_region, p_ref, current, bit_depth, pmv, lambda, mvx_min,
-    mvx_max, mvy_min, mvy_max, w, h,
+    mvx_max, mvy_min, mvy_max, w, h, ssdec,
   );
 }
 
@@ -1306,7 +1315,7 @@ fn subpel_diamond_search<T: Pixel>(
   _p_ref: &Plane<T>, bit_depth: usize, pmv: [MotionVector; 2], lambda: u32,
   mvx_min: isize, mvx_max: isize, mvy_min: isize, mvy_max: isize, w: usize,
   h: usize, use_satd: bool, current: &mut MotionSearchResult,
-  ref_frame: RefType,
+  ref_frame: RefType, ssdec: u8,
 ) {
   use crate::util::Aligned;
 
@@ -1352,6 +1361,7 @@ fn subpel_diamond_search<T: Pixel>(
         cand_mv,
         &mut tmp_region,
         ref_frame,
+        ssdec,
       );
 
       if rd.cost < best_cand.rd.cost {
@@ -1380,7 +1390,7 @@ fn get_fullpel_mv_rd<T: Pixel>(
   fi: &FrameInvariants<T>, po: PlaneOffset, org_region: &PlaneRegion<T>,
   p_ref: &Plane<T>, bit_depth: usize, pmv: [MotionVector; 2], lambda: u32,
   use_satd: bool, mvx_min: isize, mvx_max: isize, mvy_min: isize,
-  mvy_max: isize, w: usize, h: usize, cand_mv: MotionVector,
+  mvy_max: isize, w: usize, h: usize, cand_mv: MotionVector, ssdec: u8,
 ) -> MVCandidateRD {
   if (cand_mv.col as isize) < mvx_min
     || (cand_mv.col as isize) > mvx_max
@@ -1397,7 +1407,7 @@ fn get_fullpel_mv_rd<T: Pixel>(
   });
   compute_mv_rd(
     fi, pmv, lambda, use_satd, bit_depth, w, h, cand_mv, org_region,
-    &plane_ref,
+    &plane_ref, ssdec,
   )
 }
 
@@ -1406,7 +1416,7 @@ fn get_subpel_mv_rd<T: Pixel>(
   bit_depth: usize, pmv: [MotionVector; 2], lambda: u32, use_satd: bool,
   mvx_min: isize, mvx_max: isize, mvy_min: isize, mvy_max: isize, w: usize,
   h: usize, cand_mv: MotionVector, tmp_region: &mut PlaneRegionMut<T>,
-  ref_frame: RefType,
+  ref_frame: RefType, ssdec: u8,
 ) -> MVCandidateRD {
   if (cand_mv.col as isize) < mvx_min
     || (cand_mv.col as isize) > mvx_max
@@ -1429,7 +1439,7 @@ fn get_subpel_mv_rd<T: Pixel>(
   let plane_ref = tmp_region.as_const();
   compute_mv_rd(
     fi, pmv, lambda, use_satd, bit_depth, w, h, cand_mv, org_region,
-    &plane_ref,
+    &plane_ref, ssdec,
   )
 }
 
@@ -1438,7 +1448,7 @@ fn get_subpel_mv_rd<T: Pixel>(
 fn compute_mv_rd<T: Pixel>(
   fi: &FrameInvariants<T>, pmv: [MotionVector; 2], lambda: u32,
   use_satd: bool, bit_depth: usize, w: usize, h: usize, cand_mv: MotionVector,
-  plane_org: &PlaneRegion<'_, T>, plane_ref: &PlaneRegion<'_, T>,
+  plane_org: &PlaneRegion<'_, T>, plane_ref: &PlaneRegion<'_, T>, ssdec: u8,
 ) -> MVCandidateRD {
   let sad = if use_satd {
     get_satd(plane_org, plane_ref, w, h, bit_depth, fi.cpu_feature_level)
@@ -1446,8 +1456,10 @@ fn compute_mv_rd<T: Pixel>(
     get_sad(plane_org, plane_ref, w, h, bit_depth, fi.cpu_feature_level)
   };
 
-  let rate1 = get_mv_rate(cand_mv, pmv[0], fi.allow_high_precision_mv);
-  let rate2 = get_mv_rate(cand_mv, pmv[1], fi.allow_high_precision_mv);
+  let rate1 =
+    get_mv_rate(cand_mv, pmv[0], fi.allow_high_precision_mv || ssdec > 0);
+  let rate2 =
+    get_mv_rate(cand_mv, pmv[1], fi.allow_high_precision_mv || ssdec > 0);
   let rate = rate1.min(rate2 + 1);
 
   MVCandidateRD { cost: 256 * sad as u64 + rate as u64 * lambda as u64, sad }
@@ -1457,6 +1469,7 @@ fn full_search<T: Pixel>(
   fi: &FrameInvariants<T>, x_lo: isize, x_hi: isize, y_lo: isize, y_hi: isize,
   w: usize, h: usize, org_region: &PlaneRegion<T>, p_ref: &Plane<T>,
   po: PlaneOffset, step: usize, lambda: u32, pmv: [MotionVector; 2],
+  ssdec: u8,
 ) -> MotionSearchResult {
   let search_region = p_ref.region(Area::Rect {
     x: x_lo,
@@ -1488,6 +1501,7 @@ fn full_search<T: Pixel>(
         mv,
         org_region,
         &ref_window,
+        ssdec,
       );
 
       if rd.cost < best.rd.cost {
