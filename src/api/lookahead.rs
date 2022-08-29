@@ -53,6 +53,7 @@ pub(crate) fn estimate_intra_costs<T: Pixel>(
         height: IMPORTANCE_BLOCK_SIZE,
       });
 
+      // TODO: other intra prediction modes.
       let edge_buf = get_intra_edges(
         &plane.as_region(),
         TileBlockOffset(BlockOffset { x, y }),
@@ -65,64 +66,52 @@ pub(crate) fn estimate_intra_costs<T: Pixel>(
         },
         TxSize::TX_8X8,
         bit_depth,
-        None,
+        Some(PredictionMode::DC_PRED),
         false,
         IntraParam::None,
       );
 
-      let intra_cost = [
-        PredictionMode::DC_PRED,
-        PredictionMode::V_PRED,
-        PredictionMode::H_PRED,
-        PredictionMode::SMOOTH_PRED,
-        PredictionMode::SMOOTH_V_PRED,
-        PredictionMode::SMOOTH_H_PRED,
-      ]
-      .iter()
-      .map(|&luma_mode| {
-        let mut plane_after_prediction_region = plane_after_prediction
-          .region_mut(Area::Rect {
-            x: (x * IMPORTANCE_BLOCK_SIZE) as isize,
-            y: (y * IMPORTANCE_BLOCK_SIZE) as isize,
-            width: IMPORTANCE_BLOCK_SIZE,
-            height: IMPORTANCE_BLOCK_SIZE,
-          });
-
-        luma_mode.predict_intra(
-          TileRect {
-            x: x * IMPORTANCE_BLOCK_SIZE,
-            y: y * IMPORTANCE_BLOCK_SIZE,
-            width: IMPORTANCE_BLOCK_SIZE,
-            height: IMPORTANCE_BLOCK_SIZE,
-          },
-          &mut plane_after_prediction_region,
-          tx_size,
-          bit_depth,
-          &[0i16; 2],
-          IntraParam::None,
-          None,
-          &edge_buf,
-          cpu_feature_level,
-        );
-
-        let plane_ref = plane_after_prediction.region(Area::Rect {
+      let mut plane_after_prediction_region = plane_after_prediction
+        .region_mut(Area::Rect {
           x: (x * IMPORTANCE_BLOCK_SIZE) as isize,
           y: (y * IMPORTANCE_BLOCK_SIZE) as isize,
           width: IMPORTANCE_BLOCK_SIZE,
           height: IMPORTANCE_BLOCK_SIZE,
         });
 
-        get_satd(
-          &plane_org,
-          &plane_ref,
-          bsize.width(),
-          bsize.height(),
-          bit_depth,
-          cpu_feature_level,
-        )
-      })
-      .min()
-      .unwrap();
+      PredictionMode::DC_PRED.predict_intra(
+        TileRect {
+          x: x * IMPORTANCE_BLOCK_SIZE,
+          y: y * IMPORTANCE_BLOCK_SIZE,
+          width: IMPORTANCE_BLOCK_SIZE,
+          height: IMPORTANCE_BLOCK_SIZE,
+        },
+        &mut plane_after_prediction_region,
+        tx_size,
+        bit_depth,
+        &[], // Not used by DC_PRED
+        IntraParam::None,
+        None, // Not used by DC_PRED
+        &edge_buf,
+        cpu_feature_level,
+      );
+
+      let plane_after_prediction_region =
+        plane_after_prediction.region(Area::Rect {
+          x: (x * IMPORTANCE_BLOCK_SIZE) as isize,
+          y: (y * IMPORTANCE_BLOCK_SIZE) as isize,
+          width: IMPORTANCE_BLOCK_SIZE,
+          height: IMPORTANCE_BLOCK_SIZE,
+        });
+
+      let intra_cost = get_satd(
+        &plane_org,
+        &plane_after_prediction_region,
+        bsize.width(),
+        bsize.height(),
+        bit_depth,
+        cpu_feature_level,
+      );
 
       intra_costs.push(intra_cost);
     }
