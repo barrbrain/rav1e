@@ -229,6 +229,7 @@ pub(crate) fn estimate_inter_costs<T: Pixel>(
   compute_motion_vectors(&mut fi, &mut fs, &inter_cfg);
 
   // Estimate inter costs
+  let mut temp_plane = frame.planes[0].clone();
   let plane_org = &frame.planes[0];
   let plane_ref = &ref_frame.planes[0];
   let h_in_imp_b = plane_org.cfg.height / IMPORTANCE_BLOCK_SIZE;
@@ -244,11 +245,6 @@ pub(crate) fn estimate_inter_costs<T: Pixel>(
     (0..w_in_imp_b).for_each(|x| {
       let mv = stats[y * 2][x * 2].mv;
 
-      // Coordinates of the top-left corner of the reference block, in MV
-      // units.
-      let reference_x = x as i64 * IMP_BLOCK_SIZE_IN_MV_UNITS + mv.col as i64;
-      let reference_y = y as i64 * IMP_BLOCK_SIZE_IN_MV_UNITS + mv.row as i64;
-
       let region_org = plane_org.region(Area::Rect {
         x: (x * IMPORTANCE_BLOCK_SIZE) as isize,
         y: (y * IMPORTANCE_BLOCK_SIZE) as isize,
@@ -256,16 +252,38 @@ pub(crate) fn estimate_inter_costs<T: Pixel>(
         height: IMPORTANCE_BLOCK_SIZE,
       });
 
-      let region_ref = plane_ref.region(Area::Rect {
-        x: reference_x as isize / IMP_BLOCK_MV_UNITS_PER_PIXEL as isize,
-        y: reference_y as isize / IMP_BLOCK_MV_UNITS_PER_PIXEL as isize,
+      let mut region_tmp = temp_plane.region_mut(Area::Rect {
+        x: (x * IMPORTANCE_BLOCK_SIZE) as isize,
+        y: (y * IMPORTANCE_BLOCK_SIZE) as isize,
         width: IMPORTANCE_BLOCK_SIZE,
         height: IMPORTANCE_BLOCK_SIZE,
       });
+      {
+        let po = PlaneOffset {
+          x: (x * IMPORTANCE_BLOCK_SIZE) as isize,
+          y: (y * IMPORTANCE_BLOCK_SIZE) as isize,
+        };
+        let (row_frac, col_frac, src) =
+          PredictionMode::get_mv_params(plane_ref, po, mv);
+        let mode = fi.default_filter;
+        crate::mc::put_8tap(
+          &mut region_tmp,
+          src,
+          bsize.width(),
+          bsize.height(),
+          col_frac,
+          row_frac,
+          mode,
+          mode,
+          bit_depth,
+          fi.cpu_feature_level,
+        );
+      }
+      let region_tmp = region_tmp.as_const();
 
       inter_costs += get_satd(
         &region_org,
-        &region_ref,
+        &region_tmp,
         bsize.width(),
         bsize.height(),
         bit_depth,

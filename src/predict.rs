@@ -284,7 +284,7 @@ impl PredictionMode {
   // Used by inter prediction to extract the fractional component of a mv and
   // obtain the correct PlaneSlice to operate on.
   #[inline]
-  fn get_mv_params<T: Pixel>(
+  pub fn get_mv_params<T: Pixel>(
     rec_plane: &Plane<T>, po: PlaneOffset, mv: MotionVector,
   ) -> (i32, i32, PlaneSlice<T>) {
     let &PlaneConfig { xdec, ydec, .. } = &rec_plane.cfg;
