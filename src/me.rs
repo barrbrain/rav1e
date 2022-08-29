@@ -252,6 +252,7 @@ fn estimate_sb_motion<T: Pixel>(
       // Run motion estimation.
       // Note that the initial search (init) instructs the called function to
       // perform a more extensive search.
+      let pmv = [MotionVector::default(); 2];
       if let Some(results) = estimate_motion(
         fi,
         ts,
@@ -259,7 +260,7 @@ fn estimate_sb_motion<T: Pixel>(
         h,
         sub_bo,
         ref_frame,
-        None,
+        Some(pmv),
         corner,
         init,
         ssdec,
