@@ -28,7 +28,7 @@ where
   sum[K - 1] = means[K - 1].into();
 
   // Constrain complexity to O(n log n)
-  let limit = 2 * (usize::BITS - data.len().leading_zeros());
+  let limit = K as u32 * (usize::BITS - data.len().leading_zeros());
   for _ in 0..limit {
     for (i, (threshold, (low, high))) in (means.iter().skip(1).zip(&means))
       .map(|(&c1, &c2)| unsafe {
