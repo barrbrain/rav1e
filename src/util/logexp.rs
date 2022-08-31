@@ -250,6 +250,27 @@ pub const fn bexp_q24(log_scale: i32) -> i64 {
   (1i64 << 47) - 1
 }
 
+#[derive(Clone, Copy)]
+struct Q<T: Sized, const N: usize>(T);
+
+impl<T, const N: usize> Q<T, N>
+where
+  T: std::ops::Add<Output = T>,
+  T: std::ops::Shr<usize, Output = T>,
+  T: std::ops::Mul<Output = T>,
+  T: Copy,
+{
+  #[inline]
+  fn mul_add(self, mul: Self, add: Self) -> Self {
+    Self(((self.0 * mul.0) >> N) + add.0)
+  }
+
+  fn poly(self, a: &[T]) -> Self {
+    let b = a[0];
+    a[1..].iter().fold(Q(b), |acc: Self, &t| acc.mul_add(self, Q(t)))
+  }
+}
+
 /// Polynomial approximation of a binary exponential.
 /// Q10 input, Q0 output.
 #[allow(unused)]
@@ -270,21 +291,16 @@ pub const fn bexp32_q10(z: i32) -> u32 {
 
 /// Polynomial approximation of a binary logarithm.
 /// Q0 input, Q11 output.
-pub const fn blog32_q11(w: u32) -> i32 {
+pub fn blog32_q11(w: u32) -> i32 {
   if w == 0 {
     return -1;
   }
   let ipart = 31 - w.leading_zeros() as i32;
-  let n = if ipart - 16 > 0 { w >> (ipart - 16) } else { w << (16 - ipart) }
-    as i32
-    - 32768
-    - 16384;
-  let fpart = ({
-    n * (((n * (((n * (((n * -1402) >> 15) + 2546)) >> 15) - 5216)) >> 15)
-      + 15745)
-  } >> 15)
-    - 6793;
-  (ipart << 11) + (fpart >> 3)
+  // n = (w / exp2(floor(log2(w))) - 1.5) * (1 << 15)
+  let n = if ipart - 16 > 0 { w >> (ipart - 16) } else { w << (16 - ipart) };
+  let n = Q::<_, 15>(n as i32 - 32768 - 16384);
+  let fpart = n.poly(&[-1402, 2546, -5216, 15745, -6793]);
+  (ipart << 11) + (fpart.0 >> 3)
 }
 
 #[cfg(test)]
