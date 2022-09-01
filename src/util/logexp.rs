@@ -256,18 +256,20 @@ struct Q<T: Sized, const N: usize>(T);
 impl<T, const N: usize> Q<T, N>
 where
   T: std::ops::Add<Output = T>,
+  T: std::ops::Shl<usize, Output = T>,
   T: std::ops::Shr<usize, Output = T>,
   T: std::ops::Mul<Output = T>,
   T: Copy,
+  u8: Into<T>,
 {
   #[inline]
-  fn mul_add(self, mul: Self, add: Self) -> Self {
-    Self(((self.0 * mul.0) >> N) + add.0)
+  fn mul_round_add(self, mul: Self, add: Self) -> Self {
+    Self(((self.0 * mul.0 + (1u8.into() << N >> 1)) >> N) + add.0)
   }
 
   fn poly(self, a: &[T]) -> Self {
     let b = a[0];
-    a[1..].iter().fold(Q(b), |acc: Self, &t| acc.mul_add(self, Q(t)))
+    a[1..].iter().fold(Q(b), |acc: Self, &t| acc.mul_round_add(self, Q(t)))
   }
 }
 
@@ -299,8 +301,8 @@ pub fn blog32_q11(w: u32) -> i32 {
   // n = (w / exp2(floor(log2(w))) - 1.5) * (1 << 15)
   let n = if ipart - 16 > 0 { w >> (ipart - 16) } else { w << (16 - ipart) };
   let n = Q::<_, 15>(n as i32 - 32768 - 16384);
-  let fpart = n.poly(&[-1402, 2546, -5216, 15745, -6793]);
-  (ipart << 11) + (fpart.0 >> 3)
+  let fpart = n.poly(&[-1524, 2489, -5188, 15762, -6800]);
+  (ipart << 11) + ((fpart.0 + (1 << 3 >> 1)) >> 3)
 }
 
 #[cfg(test)]
