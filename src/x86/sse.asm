@@ -12,7 +12,7 @@
 
 SECTION_RODATA 32
 addsub: times 16 db 1, -1
-rounding: times 4 dq 0x800
+rounding: times 4 dq 0x80
 
 SECTION .text
 
@@ -24,8 +24,8 @@ SECTION .text
     ; Multiply and shift using scalar code
     mov             scaled, [scaleq]
     imul               rax, scaleq
-    add                rax, 0x800
-    shr                rax, 12
+    add                rax, 0x80
+    shr                rax, 8
 %endmacro
 
 ; 1 is the input and output register.
@@ -43,7 +43,7 @@ SECTION .text
     ; only do it once)
     mova               m%2, [rounding]
     paddq              m%1, m%2
-    psrlq              m%1, 12
+    psrlq              m%1, 8
 %endmacro
 
 %macro LOAD_SCALES_4X8 2
@@ -90,8 +90,8 @@ SECTION .text
     mova               m%3, [rounding]
     paddq              m%1, m%3
     paddq              m%2, m%3
-    psrlq              m%1, 12
-    psrlq              m%2, 12
+    psrlq              m%1, 8
+    psrlq              m%2, 8
     paddq              m%1, m%2
 %endmacro
 
@@ -129,6 +129,7 @@ cglobal weighted_sse_4x4, 6, 7, 5, \
 
     pshuflw             m0, m1, q3232
     paddd               m0, m1
+    xor                rax, rax
     movd               eax, m0
 
     ; Multiply and shift using scalar code.

@@ -111,13 +111,15 @@ pub fn get_weighted_sse<T: Pixel>(
     std::mem::size_of::<T>()
   }
 
+  use crate::rdo::DistortionScale;
+  let den = (DistortionScale::default().0 >> 8) as u64;
   let dist = match (bsize_opt, T::type_enum()) {
     (Err(_), _) => call_rust(),
     (Ok(bsize), PixelType::U8) => {
       match SSE_FNS[cpu.as_index()][to_index(bsize)] {
         // SAFETY: Calls Assembly code.
         Some(func) => unsafe {
-          (func)(
+          ((func)(
             src.data_ptr() as *const _,
             T::to_asm_stride(src.plane_cfg.stride),
             dst.data_ptr() as *const _,
@@ -125,6 +127,8 @@ pub fn get_weighted_sse<T: Pixel>(
             scale.as_ptr(),
             (scale_stride * size_of_element(scale)) as isize,
           ) as u64
+            + (den >> 1))
+            / den
         },
         None => call_rust(),
       }
@@ -133,14 +137,15 @@ pub fn get_weighted_sse<T: Pixel>(
       match SSE_HBD_FNS[cpu.as_index()][to_index(bsize)] {
         // SAFETY: Calls Assembly code.
         Some(func) => unsafe {
-          (func)(
+          ((func)(
             src.data_ptr() as *const _,
             T::to_asm_stride(src.plane_cfg.stride) as isize,
             dst.data_ptr() as *const _,
             T::to_asm_stride(dst.plane_cfg.stride) as isize,
             scale.as_ptr(),
             (scale_stride * size_of_element(scale)) as isize,
-          )
+          ) + (den >> 1))
+            / den
         },
         None => call_rust(),
       }

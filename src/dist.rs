@@ -26,7 +26,7 @@ pub(crate) mod rust {
   use crate::util::*;
 
   use crate::encoder::IMPORTANCE_BLOCK_SIZE;
-  use crate::rdo::{DistortionScale, RawDistortion};
+  use crate::rdo::DistortionScale;
 
   /// Compute the sum of absolute differences over a block.
   /// w and h can be at most 128, the size of the largest block.
@@ -263,13 +263,14 @@ pub(crate) mod rust {
             .sum::<u32>();
         }
 
-        sse += (RawDistortion::new(block_sse as u64)
-          * DistortionScale(scale[block_y * scale_stride + block_x]))
-        .0;
+        sse += (block_sse as u64
+          * scale[block_y * scale_stride + block_x] as u64
+          + 128)
+          >> 8;
       }
     }
-
-    sse
+    let den = (DistortionScale::default().0 >> 8) as u64;
+    (sse + (den >> 1)) / den
   }
 
   /// Number of bits of precision used in `AREA_DIVISORS`
