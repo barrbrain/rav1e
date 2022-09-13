@@ -184,7 +184,20 @@ where
     let mut dest = (**orig_frame).clone();
     let mut pad = ArrayVec::<_, TB_SIZE>::new();
     for i in 0..TB_SIZE {
-      let dec = self.chroma_sampling.get_decimation().unwrap_or((0, 0));
+      let new_chroma_plane = || {
+        if let Some(dec) = self.chroma_sampling.get_decimation() {
+          Plane::new(
+            self.pad_dimensions[1].0,
+            self.pad_dimensions[1].1,
+            dec.0,
+            dec.1,
+            0,
+            0,
+          )
+        } else {
+          Plane::new(0, 0, 0, 0, 0, 0)
+        }
+      };
       let mut pad_frame = [
         Plane::new(
           self.pad_dimensions[0].0,
@@ -194,22 +207,8 @@ where
           0,
           0,
         ),
-        Plane::new(
-          self.pad_dimensions[1].0,
-          self.pad_dimensions[1].1,
-          dec.0,
-          dec.1,
-          0,
-          0,
-        ),
-        Plane::new(
-          self.pad_dimensions[2].0,
-          self.pad_dimensions[2].1,
-          dec.0,
-          dec.1,
-          0,
-          0,
-        ),
+        new_chroma_plane(),
+        new_chroma_plane(),
       ];
 
       let frame = frames.get(&i).unwrap_or(&frames[&TB_MIDPOINT]);
@@ -232,7 +231,9 @@ where
     let mut dftc = [Complex::<f32>::default(); COMPLEX_COUNT];
     let mut means = [Complex::<f32>::default(); COMPLEX_COUNT];
 
-    for p in 0..3 {
+    let planes =
+      if self.chroma_sampling == ChromaSampling::Cs400 { 1 } else { 3 };
+    for p in 0..planes {
       let (pad_width, pad_height) = self.pad_dimensions[p];
       let mut ebuff = vec![0f32; pad_width * pad_height];
       let effective_height = self.effective_heights[p];
@@ -438,7 +439,9 @@ where
   }
 
   fn copy_pad(&self, src: &Frame<T>, dest: &mut [Plane<T>; 3]) {
-    for p in 0..src.planes.len() {
+    let planes =
+      if self.chroma_sampling == ChromaSampling::Cs400 { 1 } else { 3 };
+    for p in 0..planes {
       let src_width = src.planes[p].cfg.width;
       let dest_width = dest[p].cfg.width;
       let src_height = src.planes[p].cfg.height;
