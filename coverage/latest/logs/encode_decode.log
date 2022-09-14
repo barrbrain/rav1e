@@ -2,26 +2,26 @@ WARNING: Failed to find function "__sanitizer_acquire_crash_state".
 WARNING: Failed to find function "__sanitizer_print_stack_trace".
 WARNING: Failed to find function "__sanitizer_set_death_callback".
 INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 3497934717
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x563b813d9110, 0x563b813dc069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x563b813dc070,0x563b8140b600), 
-MERGE-OUTER: 4 files, 0 in the initial corpus, 0 processed earlier
+INFO: Seed: 1870389879
+INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x561822fdb110, 0x561822fde069), 
+INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x561822fde070,0x56182300d600), 
+MERGE-OUTER: 6 files, 0 in the initial corpus, 0 processed earlier
 MERGE-OUTER: attempt 1
 WARNING: Failed to find function "__sanitizer_acquire_crash_state".
 WARNING: Failed to find function "__sanitizer_print_stack_trace".
 WARNING: Failed to find function "__sanitizer_set_death_callback".
 INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 3497948859
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x55f7a4d40110, 0x55f7a4d43069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x55f7a4d43070,0x55f7a4d72600), 
+INFO: Seed: 1870402906
+INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x5653b65a0110, 0x5653b65a3069), 
+INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x5653b65a3070,0x5653b65d2600), 
 INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge69.txt'
-MERGE-INNER: 4 total files; 0 processed earlier; will process 4 files now
+MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge67.txt'
+MERGE-INNER: 6 total files; 0 processed earlier; will process 6 files now
 #1	pulse  exec/s: 0 rss: 27Mb
 #2	pulse  exec/s: 0 rss: 27Mb
 #4	pulse  exec/s: 0 rss: 27Mb
-#4	DONE   exec/s: 0 rss: 27Mb
+#6	DONE   exec/s: 0 rss: 27Mb
 MERGE-OUTER: successful in 1 attempt(s)
-MERGE-OUTER: the control file has 444 bytes
+MERGE-OUTER: the control file has 664 bytes
 MERGE-OUTER: consumed 0Mb (27Mb rss) to parse the control file
 MERGE-OUTER: 0 new files with 0 new features added; 0 new coverage edges
