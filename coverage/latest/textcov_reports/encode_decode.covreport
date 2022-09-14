@@ -1,53 +1,53 @@
 _RNvYINtNtCs9RXGLxpAyaq_5rav1e7fuzzing20DecodeTestParametershENtCsgmyXXAyOSNf_9arbitrary9Arbitrary9size_hintCsa9OVU6Q2oyi_13encode_decode:
-  266|      6|    fn size_hint(depth: usize) -> (usize, Option<usize>) {
-  267|      6|        let _ = depth;
-  268|      6|        (0, None)
-  269|      6|    }
+  266|      7|    fn size_hint(depth: usize) -> (usize, Option<usize>) {
+  267|      7|        let _ = depth;
+  268|      7|        (0, None)
+  269|      7|    }
 _RNvYINtNtCs9RXGLxpAyaq_5rav1e7fuzzing20DecodeTestParametershENtCsgmyXXAyOSNf_9arbitrary9Arbitrary19arbitrary_take_restCsa9OVU6Q2oyi_13encode_decode:
-  189|      6|    fn arbitrary_take_rest(mut u: Unstructured<'_>) -> Result<Self> {
-  190|      6|        Self::arbitrary(&mut u)
-  191|      6|    }
+  189|      7|    fn arbitrary_take_rest(mut u: Unstructured<'_>) -> Result<Self> {
+  190|      7|        Self::arbitrary(&mut u)
+  191|      7|    }
 
 _RINvMNtCsgmyXXAyOSNf_9arbitrary12unstructuredNtB3_12Unstructured12int_in_rangejECs9RXGLxpAyaq_5rav1e:
-  291|      7|    pub fn int_in_range<T>(&mut self, range: ops::RangeInclusive<T>) -> Result<T>
-  292|      7|    where
-  293|      7|        T: Int,
-  294|      7|    {
-  295|      7|        let (result, bytes_consumed) = Self::int_in_range_impl(range, self.data.iter().cloned())?;
+  291|      8|    pub fn int_in_range<T>(&mut self, range: ops::RangeInclusive<T>) -> Result<T>
+  292|      8|    where
+  293|      8|        T: Int,
+  294|      8|    {
+  295|      8|        let (result, bytes_consumed) = Self::int_in_range_impl(range, self.data.iter().cloned())?;
   296|      1|        self.data = &self.data[bytes_consumed..];
   297|      1|        Ok(result)
-  298|      7|    }
+  298|      8|    }
 _RINvMNtCsgmyXXAyOSNf_9arbitrary12unstructuredNtB3_12Unstructured17int_in_range_impljINtNtNtNtCsaIbLecjAYot_4core4iter8adapters6cloned6ClonedINtNtNtB1t_5slice4iter4IterhEEECs9RXGLxpAyaq_5rav1e:
-  300|      7|    fn int_in_range_impl<T>(
-  301|      7|        range: ops::RangeInclusive<T>,
-  302|      7|        mut bytes: impl Iterator<Item = u8>,
-  303|      7|    ) -> Result<(T, usize)>
-  304|      7|    where
-  305|      7|        T: Int,
-  306|      7|    {
-  307|      7|        let start = range.start();
-  308|      7|        let end = range.end();
-  309|      7|        assert!(
-  310|      7|            start <= end,
-  311|      7|            "`arbitrary::Unstructured::int_in_range` requires a non-empty range"
-  312|      7|        );
+  300|      8|    fn int_in_range_impl<T>(
+  301|      8|        range: ops::RangeInclusive<T>,
+  302|      8|        mut bytes: impl Iterator<Item = u8>,
+  303|      8|    ) -> Result<(T, usize)>
+  304|      8|    where
+  305|      8|        T: Int,
+  306|      8|    {
+  307|      8|        let start = range.start();
+  308|      8|        let end = range.end();
+  309|      8|        assert!(
+  310|      8|            start <= end,
+  311|      8|            "`arbitrary::Unstructured::int_in_range` requires a non-empty range"
+  312|      8|        );
   313|       |
   314|       |        // When there is only one possible choice, don't waste any entropy from
   315|       |        // the underlying data.
-  316|      7|        if start == end {
+  316|      8|        if start == end {
   317|      0|            return Ok((*start, 0));
-  318|      7|        }
-  319|      7|
-  320|      7|        let range: T::Widest = end.as_widest() - start.as_widest();
-  321|      7|        let mut result = T::Widest::ZERO;
-  322|      7|        let mut offset: usize = 0;
+  318|      8|        }
+  319|      8|
+  320|      8|        let range: T::Widest = end.as_widest() - start.as_widest();
+  321|      8|        let mut result = T::Widest::ZERO;
+  322|      8|        let mut offset: usize = 0;
   323|       |
-  324|     30|        while offset < mem::size_of::<T>()
-  325|     29|            && (range >> T::Widest::from_usize(offset)) > T::Widest::ZERO
-  326|     23|        {
-  327|     29|            let byte = bytes.next().ok_or(Error::NotEnoughData)?;
-  328|     23|            result = (result << 8) | T::Widest::from_u8(byte);
-  329|     23|            offset += 1;
+  324|     37|        while offset < mem::size_of::<T>()
+  325|     36|            && (range >> T::Widest::from_usize(offset)) > T::Widest::ZERO
+  326|     29|        {
+  327|     36|            let byte = bytes.next().ok_or(Error::NotEnoughData)?;
+  328|     29|            result = (result << 8) | T::Widest::from_u8(byte);
+  329|     29|            offset += 1;
   330|       |        }
   331|       |
   332|       |        // Avoid division by zero.
@@ -59,11 +59,11 @@ _RINvMNtCsgmyXXAyOSNf_9arbitrary12unstructuredNtB3_12Unstructured17int_in_range_
   338|      1|            T::from_widest(start.as_widest().wrapping_add(result)),
   339|      1|            offset,
   340|      1|        ))
-  341|      7|    }
+  341|      8|    }
 _RNvXs6_NtCsgmyXXAyOSNf_9arbitrary12unstructuredjNtB5_3Int9as_widest:
-  622|     16|                fn as_widest(self) -> Self::Widest {
-  623|     16|                    self as $widest
-  624|     16|                }
+  622|     18|                fn as_widest(self) -> Self::Widest {
+  623|     18|                    self as $widest
+  624|     18|                }
 _RNvXs5_NtCsgmyXXAyOSNf_9arbitrary12unstructuredoNtB5_3Int12wrapping_add:
   643|      1|                fn wrapping_add(self, rhs: Self) -> Self {
   644|      1|                    <$ty>::wrapping_add(self, rhs)
@@ -72,45 +72,45 @@ _RNvXs5_NtCsgmyXXAyOSNf_9arbitrary12unstructuredoNtB5_3Int11checked_add:
   639|      1|                fn checked_add(self, rhs: Self) -> Option<Self> {
   640|      1|                    <$ty>::checked_add(self, rhs)
   641|      1|                }
-_RNvMNtCsgmyXXAyOSNf_9arbitrary12unstructuredNtB2_12Unstructured3new:
-   84|      6|    pub fn new(data: &'a [u8]) -> Self {
-   85|      6|        Unstructured { data }
-   86|      6|    }
 _RNvXs6_NtCsgmyXXAyOSNf_9arbitrary12unstructuredjNtB5_3Int11from_widest:
   626|      1|                fn from_widest(w: Self::Widest) -> Self {
   627|      1|                    let x = <$ty>::max_value().as_widest();
   628|      1|                    (w % x) as Self
   629|      1|                }
 _RNvXs5_NtCsgmyXXAyOSNf_9arbitrary12unstructuredoNtB5_3Int10from_usize:
-  635|     29|                fn from_usize(u: usize) -> Self {
-  636|     29|                    u as Self
-  637|     29|                }
+  635|     36|                fn from_usize(u: usize) -> Self {
+  636|     36|                    u as Self
+  637|     36|                }
 _RNvXs5_NtCsgmyXXAyOSNf_9arbitrary12unstructuredoNtB5_3Int7from_u8:
-  631|     23|                fn from_u8(b: u8) -> Self {
-  632|     23|                    b as Self
-  633|     23|                }
+  631|     29|                fn from_u8(b: u8) -> Self {
+  632|     29|                    b as Self
+  633|     29|                }
+_RNvMNtCsgmyXXAyOSNf_9arbitrary12unstructuredNtB2_12Unstructured3new:
+   84|      7|    pub fn new(data: &'a [u8]) -> Self {
+   85|      7|        Unstructured { data }
+   86|      7|    }
 
 rust_fuzzer_test_input:
-  143|      6|        pub extern "C" fn rust_fuzzer_test_input(bytes: &[u8]) {
-  144|      6|            use libfuzzer_sys::arbitrary::{Arbitrary, Unstructured};
-  145|      6|
-  146|      6|            // Early exit if we don't have enough bytes for the `Arbitrary`
-  147|      6|            // implementation. This helps the fuzzer avoid exploring all the
-  148|      6|            // different not-enough-input-bytes paths inside the `Arbitrary`
-  149|      6|            // implementation. Additionally, it exits faster, letting the fuzzer
-  150|      6|            // get to longer inputs that actually lead to interesting executions
-  151|      6|            // quicker.
-  152|      6|            if bytes.len() < <$dty as Arbitrary>::size_hint(0).0 {
+  143|      7|        pub extern "C" fn rust_fuzzer_test_input(bytes: &[u8]) {
+  144|      7|            use libfuzzer_sys::arbitrary::{Arbitrary, Unstructured};
+  145|      7|
+  146|      7|            // Early exit if we don't have enough bytes for the `Arbitrary`
+  147|      7|            // implementation. This helps the fuzzer avoid exploring all the
+  148|      7|            // different not-enough-input-bytes paths inside the `Arbitrary`
+  149|      7|            // implementation. Additionally, it exits faster, letting the fuzzer
+  150|      7|            // get to longer inputs that actually lead to interesting executions
+  151|      7|            // quicker.
+  152|      7|            if bytes.len() < <$dty as Arbitrary>::size_hint(0).0 {
   153|      0|                return;
-  154|      6|            }
-  155|      6|
-  156|      6|            let mut u = Unstructured::new(bytes);
-  157|      6|            let data = <$dty as Arbitrary>::arbitrary_take_rest(u);
+  154|      7|            }
+  155|      7|
+  156|      7|            let mut u = Unstructured::new(bytes);
+  157|      7|            let data = <$dty as Arbitrary>::arbitrary_take_rest(u);
   158|       |
   159|       |            // When `RUST_LIBFUZZER_DEBUG_PATH` is set, write the debug
   160|       |            // formatting of the input to that file. This is only intended for
   161|       |            // `cargo fuzz`'s use!
-  162|      6|            if let Ok(path) = std::env::var("RUST_LIBFUZZER_DEBUG_PATH") {
+  162|      7|            if let Ok(path) = std::env::var("RUST_LIBFUZZER_DEBUG_PATH") {
   163|       |                use std::io::Write;
   164|      0|                let mut file = std::fs::File::create(path)
   165|      0|                    .expect("failed to create `RUST_LIBFUZZER_DEBUG_PATH` file");
@@ -120,15 +120,15 @@ rust_fuzzer_test_input:
   169|       |                })
   170|      0|                .expect("failed to write to `RUST_LIBFUZZER_DEBUG_PATH` file");
   171|      0|                return;
-  172|      6|            }
+  172|      7|            }
   173|       |
-  174|      6|            let $data = match data {
+  174|      7|            let $data = match data {
   175|      0|                Ok(d) => d,
-  176|      6|                Err(_) => return,
+  176|      7|                Err(_) => return,
   177|       |            };
   178|       |
   179|       |            $body
-  180|      6|        }
+  180|      7|        }
 LLVMFuzzerInitialize:
    39|      2|pub fn initialize(_argc: *const isize, _argv: *const *const *const u8) -> isize {
    40|      2|    // Registers a panic hook that aborts the process before unwinding.
@@ -147,28 +147,28 @@ LLVMFuzzerInitialize:
    53|      2|    0
    54|      2|}
 _RNCNvCsgwr9ydV3PGY_13libfuzzer_sys15test_input_wrap0B3_:
-   25|      6|    let test_input = ::std::panic::catch_unwind(|| unsafe {
-   26|      6|        let data_slice = ::std::slice::from_raw_parts(data, size);
-   27|      6|        rust_fuzzer_test_input(data_slice);
-   28|      6|    });
+   25|      7|    let test_input = ::std::panic::catch_unwind(|| unsafe {
+   26|      7|        let data_slice = ::std::slice::from_raw_parts(data, size);
+   27|      7|        rust_fuzzer_test_input(data_slice);
+   28|      7|    });
 LLVMFuzzerTestOneInput:
-   24|      6|pub fn test_input_wrap(data: *const u8, size: usize) -> i32 {
-   25|      6|    let test_input = ::std::panic::catch_unwind(|| unsafe {
+   24|      7|pub fn test_input_wrap(data: *const u8, size: usize) -> i32 {
+   25|      7|    let test_input = ::std::panic::catch_unwind(|| unsafe {
    26|       |        let data_slice = ::std::slice::from_raw_parts(data, size);
    27|       |        rust_fuzzer_test_input(data_slice);
-   28|      6|    });
-   29|      6|    if test_input.err().is_some() {
+   28|      7|    });
+   29|      7|    if test_input.err().is_some() {
    30|       |        // hopefully the custom panic hook will be called before and abort the
    31|       |        // process before the stack frames are unwinded.
    32|      0|        ::std::process::abort();
-   33|      6|    }
-   34|      6|    0
-   35|      6|}
+   33|      7|    }
+   34|      7|    0
+   35|      7|}
 
 _RNvXs0_NtCs9RXGLxpAyaq_5rav1e7fuzzingINtB5_20DecodeTestParametershENtCsgmyXXAyOSNf_9arbitrary9Arbitrary9arbitraryCsa9OVU6Q2oyi_13encode_decode:
-  320|      6|  fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self, Error> {
+  320|      7|  fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self, Error> {
   321|      0|    let mut p = Self {
-  322|      6|      w: u.int_in_range(16..=16 + 255)?,
+  322|      7|      w: u.int_in_range(16..=16 + 255)?,
   323|      1|      h: u.int_in_range(16..=16 + 255)?,
   324|      0|      speed: u.int_in_range(0..=10)?,
   325|      0|      q: u8::arbitrary(u)?.into(),
@@ -201,5 +201,5 @@ _RNvXs0_NtCs9RXGLxpAyaq_5rav1e7fuzzingINtB5_20DecodeTestParametershENtCsgmyXXAyO
   352|      0|      p.limit = 1
   353|      0|    }
   354|      0|    Ok(p)
-  355|      6|  }
+  355|      7|  }
 
