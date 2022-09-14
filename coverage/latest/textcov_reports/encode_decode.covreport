@@ -1,0 +1,192 @@
+_RNvYINtNtCs9RXGLxpAyaq_5rav1e7fuzzing20DecodeTestParametershENtCsgmyXXAyOSNf_9arbitrary9Arbitrary9size_hintCsa9OVU6Q2oyi_13encode_decode:
+  266|      4|    fn size_hint(depth: usize) -> (usize, Option<usize>) {
+  267|      4|        let _ = depth;
+  268|      4|        (0, None)
+  269|      4|    }
+_RNvYINtNtCs9RXGLxpAyaq_5rav1e7fuzzing20DecodeTestParametershENtCsgmyXXAyOSNf_9arbitrary9Arbitrary19arbitrary_take_restCsa9OVU6Q2oyi_13encode_decode:
+  189|      4|    fn arbitrary_take_rest(mut u: Unstructured<'_>) -> Result<Self> {
+  190|      4|        Self::arbitrary(&mut u)
+  191|      4|    }
+
+_RINvMNtCsgmyXXAyOSNf_9arbitrary12unstructuredNtB3_12Unstructured12int_in_rangejECs9RXGLxpAyaq_5rav1e:
+  291|      4|    pub fn int_in_range<T>(&mut self, range: ops::RangeInclusive<T>) -> Result<T>
+  292|      4|    where
+  293|      4|        T: Int,
+  294|      4|    {
+  295|      4|        let (result, bytes_consumed) = Self::int_in_range_impl(range, self.data.iter().cloned())?;
+  296|      0|        self.data = &self.data[bytes_consumed..];
+  297|      0|        Ok(result)
+  298|      4|    }
+_RINvMNtCsgmyXXAyOSNf_9arbitrary12unstructuredNtB3_12Unstructured17int_in_range_impljINtNtNtNtCsaIbLecjAYot_4core4iter8adapters6cloned6ClonedINtNtNtB1t_5slice4iter4IterhEEECs9RXGLxpAyaq_5rav1e:
+  300|      4|    fn int_in_range_impl<T>(
+  301|      4|        range: ops::RangeInclusive<T>,
+  302|      4|        mut bytes: impl Iterator<Item = u8>,
+  303|      4|    ) -> Result<(T, usize)>
+  304|      4|    where
+  305|      4|        T: Int,
+  306|      4|    {
+  307|      4|        let start = range.start();
+  308|      4|        let end = range.end();
+  309|      4|        assert!(
+  310|      4|            start <= end,
+  311|      4|            "`arbitrary::Unstructured::int_in_range` requires a non-empty range"
+  312|      4|        );
+  313|       |
+  314|       |        // When there is only one possible choice, don't waste any entropy from
+  315|       |        // the underlying data.
+  316|      4|        if start == end {
+  317|      0|            return Ok((*start, 0));
+  318|      4|        }
+  319|      4|
+  320|      4|        let range: T::Widest = end.as_widest() - start.as_widest();
+  321|      4|        let mut result = T::Widest::ZERO;
+  322|      4|        let mut offset: usize = 0;
+  323|       |
+  324|     18|        while offset < mem::size_of::<T>()
+  325|     18|            && (range >> T::Widest::from_usize(offset)) > T::Widest::ZERO
+  326|     14|        {
+  327|     18|            let byte = bytes.next().ok_or(Error::NotEnoughData)?;
+  328|     14|            result = (result << 8) | T::Widest::from_u8(byte);
+  329|     14|            offset += 1;
+  330|       |        }
+  331|       |
+  332|       |        // Avoid division by zero.
+  333|      0|        if let Some(range) = range.checked_add(T::Widest::ONE) {
+  334|      0|            result = result % range;
+  335|      0|        }
+  336|       |
+  337|      0|        Ok((
+  338|      0|            T::from_widest(start.as_widest().wrapping_add(result)),
+  339|      0|            offset,
+  340|      0|        ))
+  341|      4|    }
+_RNvXs6_NtCsgmyXXAyOSNf_9arbitrary12unstructuredjNtB5_3Int9as_widest:
+  622|      8|                fn as_widest(self) -> Self::Widest {
+  623|      8|                    self as $widest
+  624|      8|                }
+_RNvMNtCsgmyXXAyOSNf_9arbitrary12unstructuredNtB2_12Unstructured3new:
+   84|      4|    pub fn new(data: &'a [u8]) -> Self {
+   85|      4|        Unstructured { data }
+   86|      4|    }
+_RNvXs5_NtCsgmyXXAyOSNf_9arbitrary12unstructuredoNtB5_3Int10from_usize:
+  635|     18|                fn from_usize(u: usize) -> Self {
+  636|     18|                    u as Self
+  637|     18|                }
+_RNvXs5_NtCsgmyXXAyOSNf_9arbitrary12unstructuredoNtB5_3Int7from_u8:
+  631|     14|                fn from_u8(b: u8) -> Self {
+  632|     14|                    b as Self
+  633|     14|                }
+
+rust_fuzzer_test_input:
+  143|      4|        pub extern "C" fn rust_fuzzer_test_input(bytes: &[u8]) {
+  144|      4|            use libfuzzer_sys::arbitrary::{Arbitrary, Unstructured};
+  145|      4|
+  146|      4|            // Early exit if we don't have enough bytes for the `Arbitrary`
+  147|      4|            // implementation. This helps the fuzzer avoid exploring all the
+  148|      4|            // different not-enough-input-bytes paths inside the `Arbitrary`
+  149|      4|            // implementation. Additionally, it exits faster, letting the fuzzer
+  150|      4|            // get to longer inputs that actually lead to interesting executions
+  151|      4|            // quicker.
+  152|      4|            if bytes.len() < <$dty as Arbitrary>::size_hint(0).0 {
+  153|      0|                return;
+  154|      4|            }
+  155|      4|
+  156|      4|            let mut u = Unstructured::new(bytes);
+  157|      4|            let data = <$dty as Arbitrary>::arbitrary_take_rest(u);
+  158|       |
+  159|       |            // When `RUST_LIBFUZZER_DEBUG_PATH` is set, write the debug
+  160|       |            // formatting of the input to that file. This is only intended for
+  161|       |            // `cargo fuzz`'s use!
+  162|      4|            if let Ok(path) = std::env::var("RUST_LIBFUZZER_DEBUG_PATH") {
+  163|       |                use std::io::Write;
+  164|      0|                let mut file = std::fs::File::create(path)
+  165|      0|                    .expect("failed to create `RUST_LIBFUZZER_DEBUG_PATH` file");
+  166|      0|                (match data {
+  167|      0|                    Ok(data) => writeln!(&mut file, "{:#?}", data),
+  168|      0|                    Err(err) => writeln!(&mut file, "Arbitrary Error: {}", err),
+  169|       |                })
+  170|      0|                .expect("failed to write to `RUST_LIBFUZZER_DEBUG_PATH` file");
+  171|      0|                return;
+  172|      4|            }
+  173|       |
+  174|      4|            let $data = match data {
+  175|      0|                Ok(d) => d,
+  176|      4|                Err(_) => return,
+  177|       |            };
+  178|       |
+  179|       |            $body
+  180|      4|        }
+LLVMFuzzerInitialize:
+   39|      2|pub fn initialize(_argc: *const isize, _argv: *const *const *const u8) -> isize {
+   40|      2|    // Registers a panic hook that aborts the process before unwinding.
+   41|      2|    // It is useful to abort before unwinding so that the fuzzer will then be
+   42|      2|    // able to analyse the process stack frames to tell different bugs appart.
+   43|      2|    //
+   44|      2|    // HACK / FIXME: it would be better to use `-C panic=abort` but it's currently
+   45|      2|    // impossible to build code using compiler plugins with this flag.
+   46|      2|    // We will be able to remove this code when
+   47|      2|    // https://github.com/rust-lang/cargo/issues/5423 is fixed.
+   48|      2|    let default_hook = ::std::panic::take_hook();
+   49|      2|    ::std::panic::set_hook(Box::new(move |panic_info| {
+   50|       |        default_hook(panic_info);
+   51|       |        ::std::process::abort();
+   52|      2|    }));
+   53|      2|    0
+   54|      2|}
+_RNCNvCsgwr9ydV3PGY_13libfuzzer_sys15test_input_wrap0B3_:
+   25|      4|    let test_input = ::std::panic::catch_unwind(|| unsafe {
+   26|      4|        let data_slice = ::std::slice::from_raw_parts(data, size);
+   27|      4|        rust_fuzzer_test_input(data_slice);
+   28|      4|    });
+LLVMFuzzerTestOneInput:
+   24|      4|pub fn test_input_wrap(data: *const u8, size: usize) -> i32 {
+   25|      4|    let test_input = ::std::panic::catch_unwind(|| unsafe {
+   26|       |        let data_slice = ::std::slice::from_raw_parts(data, size);
+   27|       |        rust_fuzzer_test_input(data_slice);
+   28|      4|    });
+   29|      4|    if test_input.err().is_some() {
+   30|       |        // hopefully the custom panic hook will be called before and abort the
+   31|       |        // process before the stack frames are unwinded.
+   32|      0|        ::std::process::abort();
+   33|      4|    }
+   34|      4|    0
+   35|      4|}
+
+_RNvXs0_NtCs9RXGLxpAyaq_5rav1e7fuzzingINtB5_20DecodeTestParametershENtCsgmyXXAyOSNf_9arbitrary9Arbitrary9arbitraryCsa9OVU6Q2oyi_13encode_decode:
+  320|      4|  fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self, Error> {
+  321|      0|    let mut p = Self {
+  322|      4|      w: u.int_in_range(16..=16 + 255)?,
+  323|      0|      h: u.int_in_range(16..=16 + 255)?,
+  324|      0|      speed: u.int_in_range(0..=10)?,
+  325|      0|      q: u8::arbitrary(u)?.into(),
+  326|      0|      limit: u.int_in_range(1..=3)?,
+  327|       |      bit_depth: 8,
+  328|      0|      chroma_sampling: *u.choose(&[
+  329|      0|        ChromaSampling::Cs420,
+  330|      0|        ChromaSampling::Cs422,
+  331|      0|        ChromaSampling::Cs444,
+  332|      0|        ChromaSampling::Cs400,
+  333|      0|      ])?,
+  334|      0|      min_keyint: u.int_in_range(0..=3)?,
+  335|      0|      max_keyint: u.int_in_range(1..=4)?,
+  336|      0|      switch_frame_interval: u.int_in_range(0..=3)?,
+  337|      0|      low_latency: bool::arbitrary(u)?,
+  338|      0|      error_resilient: bool::arbitrary(u)?,
+  339|      0|      bitrate: u16::arbitrary(u)?.into(),
+  340|      0|      tile_cols_log2: u.int_in_range(0..=2)?,
+  341|      0|      tile_rows_log2: u.int_in_range(0..=2)?,
+  342|      0|      still_picture: bool::arbitrary(u)?,
+  343|      0|      pixel: PhantomData,
+  344|       |    };
+  345|      0|    if matches!(T::type_enum(), PixelType::U16) {
+  346|      0|      p.bit_depth = *u.choose(&[8, 10, 12])?;
+  347|      0|    }
+  348|      0|    if !p.low_latency {
+  349|      0|      p.switch_frame_interval = 0;
+  350|      0|    }
+  351|      0|    if p.still_picture {
+  352|      0|      p.limit = 1
+  353|      0|    }
+  354|      0|    Ok(p)
+  355|      4|  }
+

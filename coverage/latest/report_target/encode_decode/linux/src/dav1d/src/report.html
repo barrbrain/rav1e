@@ -1,0 +1,664 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name='viewport' content='width=device-width,initial-scale=1'>
+    <meta charset='UTF-8'>
+    <link rel='stylesheet' type='text/css' href='../../../../style.css'>
+    <!-- Custom style overrides -->
+    <style>
+      /* Copyright 2018 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file. */
+
+th, td {
+  padding: 5px 16px;
+}
+
+tbody td, tfoot td {
+  font-size: 14px;
+}
+
+thead th {
+  font-size: 16px;
+}
+
+thead th, tfoot td {
+  background-color: #f5f5f5;
+  border-left: 1px solid #e4e4e4;
+  border-right: 1px solid #e4e4e4;
+  color: #484848;
+  text-transform: uppercase;
+}
+
+tbody tr:hover td, tfoot tr:hover td {
+  background-color: #f5f5f5;
+  border-color: #e4e4e4 !important;
+}
+    </style>
+  </head>
+  <body>
+    <h2>Coverage Report</h2>
+    <p>
+      View results by:
+            <a href='../../../directory_view_index.html'>Directories</a>
+              | <a href='../../../file_view_index.html'>Files</a>
+          </p>
+    <div class='centered'><table>
+  <thead>
+    <tr>
+      <th class="column-entry-bold">Path</th>
+      <th class="column-entry-bold" onclick="sortTable(SORT_COLUMN.LINE)" title=
+          "Line coverage is the percentage of code lines which have been executed at least once. Only executable lines within function bodies are considered to be code lines.">
+        Line Coverage
+      </th>
+      <th class="column-entry-bold" onclick="sortTable(SORT_COLUMN.FUNCTION)" title=
+          "Function coverage is the percentage of functions which have been executed at least once. A function is considered to be executed if any of its instantiations are executed.">
+        Function Coverage
+      </th>
+      <th class="column-entry-bold" onclick="sortTable(SORT_COLUMN.REGION)" title=
+          "Region coverage is the percentage of code regions which have been executed at least once. A code region may span multiple lines (e.g in a large function body with no control flow). However, it's also possible for a single line to contain multiple code regions (e.g in 'return x || y &amp;&amp; z').">
+        Region Coverage
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr class="light-row">
+      <td>
+                  <pre><a href='cdef_apply_tmpl.c.html'>cdef_apply_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/224)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/4)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/171)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='cdef_tmpl.c.html'>cdef_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/220)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/7)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/113)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='cdf.c.html'>cdf.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/153)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/7)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/595)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='cpu.c.html'>cpu.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/15)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/4)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/10)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='data.c.html'>data.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/70)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/8)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/130)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='decode.c.html'>decode.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/3291)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/34)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/4413)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='env.h.html'>env.h</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/347)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/24)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/405)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='fg_apply_tmpl.c.html'>fg_apply_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/129)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/4)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/93)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='filmgrain_tmpl.c.html'>filmgrain_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/273)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/10)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/239)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='getbits.c.html'>getbits.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/92)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/10)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/52)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='getbits.h.html'>getbits.h</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/3)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/1)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/1)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='intra_edge.c.html'>intra_edge.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/99)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/3)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/79)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='ipred_prepare.h.html'>ipred_prepare.h</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/11)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/2)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/19)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='ipred_prepare_tmpl.c.html'>ipred_prepare_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/102)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/1)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/123)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='ipred_tmpl.c.html'>ipred_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/494)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/31)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/342)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='itx_1d.c.html'>itx_1d.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/845)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/19)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/427)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='itx_tmpl.c.html'>itx_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/128)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/4)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/112)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='lf_apply_tmpl.c.html'>lf_apply_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/335)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/8)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/204)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='lf_mask.c.html'>lf_mask.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/321)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/9)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/366)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='lib.c.html'>lib.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/575)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/26)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/524)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='loopfilter_tmpl.c.html'>loopfilter_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/169)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/6)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/134)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='looprestoration_tmpl.c.html'>looprestoration_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/337)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/9)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/277)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='lr_apply_tmpl.c.html'>lr_apply_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/122)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/4)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/54)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='mc_tmpl.c.html'>mc_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/594)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/27)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/521)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='mem.c.html'>mem.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/79)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/5)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/35)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='mem.h.html'>mem.h</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/37)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/4)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/11)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='msac.c.html'>msac.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/121)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/9)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/65)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='msac.h.html'>msac.h</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/14)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/2)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/9)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='obu.c.html'>obu.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/1242)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/7)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/1087)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='picture.c.html'>picture.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/190)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/13)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/181)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='qm.c.html'>qm.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/55)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/4)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/28)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='recon_tmpl.c.html'>recon_tmpl.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/1932)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/19)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/2224)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='ref.c.html'>ref.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/60)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/8)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/26)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='refmvs.c.html'>refmvs.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/692)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/16)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/515)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='thread.h.html'>thread.h</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/3)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/1)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/1)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='thread_task.c.html'>thread_task.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/681)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/14)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/503)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='warpmv.c.html'>warpmv.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/114)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/8)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/31)</pre>
+      </td>
+          </tr>
+        <tr class="light-row">
+      <td>
+                  <pre><a href='wedge.c.html'>wedge.c</a></pre>
+              </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/145)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/10)</pre>
+      </td>
+            <td class='column-entry-red'>
+        <pre>  0.00% (0/82)</pre>
+      </td>
+          </tr>
+      </tbody>
+      <tfoot>
+      <tr class="light-row-bold">
+        <td>
+          <pre>Totals</pre>
+        </td>
+                <td class='column-entry-red'>
+          <pre>  0.00% (0/14314)</pre>
+        </td>
+                <td class='column-entry-red'>
+          <pre>  0.00% (0/382)</pre>
+        </td>
+                <td class='column-entry-red'>
+          <pre>  0.00% (0/14202)</pre>
+        </td>
+              </tr>
+    </tfoot>
+  </table>
+
+<script>
+  const SORT_COLUMN = {
+    LINE: 2,
+    FUNCTION: 3,
+    REGION: 4,
+  }
+
+  const SORT_TYPES = {
+    UNSET: -1,
+    PERCENT: 0,
+    AGGREGATE: 1,
+  }
+
+  var SORT_ORDER = {
+    [SORT_COLUMN.LINE]: [SORT_TYPES.UNSET],
+    [SORT_COLUMN.FUNCTION]: [SORT_TYPES.UNSET],
+    [SORT_COLUMN.REGION]: [SORT_TYPES.UNSET],
+  }
+
+  function sortTable(columnNumber) {
+    SORT_ORDER[columnNumber] = ++SORT_ORDER[columnNumber] % 2;
+
+    let columnSortOrder = SORT_ORDER[columnNumber];
+    let tbody = document.getElementsByTagName("tbody")[0];
+
+    [].slice.call(tbody.rows).sort(function(a, b) {
+      let aColumn = a.cells[columnNumber-1].textContent;
+      let bColumn = b.cells[columnNumber-1].textContent;
+
+      let aColumnCompare, bColumnCompare;
+      if (columnSortOrder == SORT_TYPES.PERCENT) {
+        aColumnCompare = parseFloat(/([0-9.]+)%/.exec(aColumn)[1]);
+        bColumnCompare = parseFloat(/([0-9.]+)%/.exec(bColumn)[1]);
+      } else {
+        aColumnCompare = parseInt(/\/(\d+)/.exec(aColumn)[1]);
+        bColumnCompare = parseInt(/\/(\d+)/.exec(bColumn)[1]);
+      }
+
+      return (
+          aColumnCompare < bColumnCompare ? -1:
+              aColumnCompare > bColumnCompare ? 1 : 0);
+    }).forEach(function(value, index) {
+      tbody.appendChild(value);
+    });
+  }
+
+</script>    </div>
+  </body>
+</html>
