@@ -2,193 +2,31 @@ WARNING: Failed to find function "__sanitizer_acquire_crash_state".
 WARNING: Failed to find function "__sanitizer_print_stack_trace".
 WARNING: Failed to find function "__sanitizer_set_death_callback".
 INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 2842381116
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x55a732f19110, 0x55a732f1c069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x55a732f1c070,0x55a732f4b600), 
-MERGE-OUTER: 91 files, 0 in the initial corpus, 0 processed earlier
+INFO: Seed: 429248531
+INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x555701170110, 0x555701173069), 
+INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x555701173070,0x5557011a2600), 
+MERGE-OUTER: 146 files, 0 in the initial corpus, 0 processed earlier
 MERGE-OUTER: attempt 1
 WARNING: Failed to find function "__sanitizer_acquire_crash_state".
 WARNING: Failed to find function "__sanitizer_print_stack_trace".
 WARNING: Failed to find function "__sanitizer_set_death_callback".
 INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 2842392187
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x555f0dfb6110, 0x555f0dfb9069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x555f0dfb9070,0x555f0dfe8600), 
+INFO: Seed: 429257287
+INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x56258d037110, 0x56258d03a069), 
+INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x56258d03a070,0x56258d069600), 
 INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: 91 total files; 0 processed earlier; will process 91 files now
+MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge56.txt'
+MERGE-INNER: 146 total files; 0 processed earlier; will process 146 files now
 #1	pulse  exec/s: 0 rss: 27Mb
 #2	pulse  exec/s: 0 rss: 27Mb
 #4	pulse  exec/s: 0 rss: 27Mb
 #8	pulse  exec/s: 0 rss: 27Mb
 #16	pulse  exec/s: 0 rss: 27Mb
-ALARM: working on the last Unit for 149 seconds
-       and the timeout value is 100 (use -timeout=N to change)
-MS: 0 ; base unit: 0000000000000000000000000000000000000000
-0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xd1,0xa,0xa,0xa,0x34,0xa,0x3b,0x26,0x40,
-\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\321\012\012\0124\012;&@
-artifact_prefix='./'; Test unit written to ./timeout-5b969f8800217fd5047ac31de8b416a911f9cfd7
-Base64: 0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHRCgoKNAo7JkA=
-==60== ERROR: libFuzzer: timeout after 149 seconds
-SUMMARY: libFuzzer: timeout
-MERGE-OUTER: attempt 2
-WARNING: Failed to find function "__sanitizer_acquire_crash_state".
-WARNING: Failed to find function "__sanitizer_print_stack_trace".
-WARNING: Failed to find function "__sanitizer_set_death_callback".
-INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 3199405385
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x560b31beb110, 0x560b31bee069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x560b31bee070,0x560b31c1d600), 
-INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: '/github/workspace/cifuzz-corpus/encode_decode/5b969f8800217fd5047ac31de8b416a911f9cfd7' caused a failure at the previous merge step
-MERGE-INNER: 91 total files; 26 processed earlier; will process 65 files now
-#1	pulse  cov: 590 ft: 591 exec/s: 0 rss: 36Mb
-#2	pulse  cov: 972 ft: 1015 exec/s: 0 rss: 38Mb
-#4	pulse  cov: 1028 ft: 1122 exec/s: 0 rss: 38Mb
-#8	pulse  cov: 1062 ft: 1187 exec/s: 0 rss: 40Mb
-ALARM: working on the last Unit for 106 seconds
-       and the timeout value is 100 (use -timeout=N to change)
-MS: 0 ; base unit: 0000000000000000000000000000000000000000
-0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xa,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0x2,0x8b,
-\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\000\000\000\000\000\000\000\012\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\002\213
-artifact_prefix='./'; Test unit written to ./timeout-ee07917567b39dd9a9aeae401daeaf1ce67638e7
-Base64: 09PT09PT09PT09PT09PT09MAAAAAAAAACtPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09MCiw==
-==87== ERROR: libFuzzer: timeout after 106 seconds
-SUMMARY: libFuzzer: timeout
-MERGE-OUTER: attempt 3
-WARNING: Failed to find function "__sanitizer_acquire_crash_state".
-WARNING: Failed to find function "__sanitizer_print_stack_trace".
-WARNING: Failed to find function "__sanitizer_set_death_callback".
-INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 3709419410
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x55eee95f6110, 0x55eee95f9069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x55eee95f9070,0x55eee9628600), 
-INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: '/github/workspace/cifuzz-corpus/encode_decode/ee07917567b39dd9a9aeae401daeaf1ce67638e7' caused a failure at the previous merge step
-MERGE-INNER: 91 total files; 40 processed earlier; will process 51 files now
-#1	pulse  cov: 600 ft: 601 exec/s: 0 rss: 39Mb
-#2	pulse  cov: 602 ft: 615 exec/s: 0 rss: 41Mb
-ALARM: working on the last Unit for 106 seconds
-       and the timeout value is 100 (use -timeout=N to change)
-MS: 0 ; base unit: 0000000000000000000000000000000000000000
-0xd3,0xd3,0xd3,0x0,0x0,0x0,0x1,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0x1,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0xd3,0x2,0x8b,
-\323\323\323\000\000\000\001\323\323\323\323\323\323\323\323\323\323\323\000\000\000\000\000\000\000\001\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\001\000\000\000\000\000\000\000\323\323\323\323\323\323\323\323\323\323\323\323\323\323\323\002\213
-artifact_prefix='./'; Test unit written to ./timeout-116f096d628c251324d2018227c7b5b26b56967a
-Base64: 09PTAAAAAdPT09PT09PT09PTAAAAAAAAAAHT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PTAQAAAAAAAADT09PT09PT09PT09PT09MCiw==
-==132== ERROR: libFuzzer: timeout after 106 seconds
-SUMMARY: libFuzzer: timeout
-MERGE-OUTER: attempt 4
-WARNING: Failed to find function "__sanitizer_acquire_crash_state".
-WARNING: Failed to find function "__sanitizer_print_stack_trace".
-WARNING: Failed to find function "__sanitizer_set_death_callback".
-INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 3913432727
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x557d227af110, 0x557d227b2069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x557d227b2070,0x557d227e1600), 
-INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: '/github/workspace/cifuzz-corpus/encode_decode/116f096d628c251324d2018227c7b5b26b56967a' caused a failure at the previous merge step
-MERGE-INNER: 91 total files; 44 processed earlier; will process 47 files now
-ALARM: working on the last Unit for 101 seconds
-       and the timeout value is 100 (use -timeout=N to change)
-MS: 0 ; base unit: 0000000000000000000000000000000000000000
-0x85,0x69,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x69,0x0,0x0,0x0,0x0,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x69,0x2a,0x3b,0xa,0x3b,0xe5,0x6d,0x6d,0x6d,0x6d,0x6d,0x6d,0x6d,0x6d,0x6d,0x6d,0x6d,0x6d,0x69,0x69,0x69,0x69,0x69,0x69,0xe9,0x69,0x6d,0x6d,0x69,0x6d,0x6d,0x6d,0x69,0x69,0x3b,0x85,0xa,0x3b,0x40,0x6d,0x6d,0x6d,
-\205i\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377i\000\000\000\000iiiiiiiiiiiiiiiiii*;\012;\345mmmmmmmmmmmmiiiiii\351immimmmii;\205\012;@mmm
-artifact_prefix='./'; Test unit written to ./timeout-ac51374caf9b1cac1f3cff4d2cc0fc85f335d6cc
-Base64: hWn//////////////////////2kAAAAAaWlpaWlpaWlpaWlpaWlpaWlpKjsKO+VtbW1tbW1tbW1tbW1paWlpaWnpaW1taW1tbWlpO4UKO0BtbW0=
-==147== ERROR: libFuzzer: timeout after 101 seconds
-SUMMARY: libFuzzer: timeout
-MERGE-OUTER: attempt 5
-WARNING: Failed to find function "__sanitizer_acquire_crash_state".
-WARNING: Failed to find function "__sanitizer_print_stack_trace".
-WARNING: Failed to find function "__sanitizer_set_death_callback".
-INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 4015445657
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x556792995110, 0x556792998069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x556792998070,0x5567929c7600), 
-INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: '/github/workspace/cifuzz-corpus/encode_decode/ac51374caf9b1cac1f3cff4d2cc0fc85f335d6cc' caused a failure at the previous merge step
-MERGE-INNER: 91 total files; 45 processed earlier; will process 46 files now
-#1	pulse  cov: 582 ft: 583 exec/s: 0 rss: 35Mb
-#2	pulse  cov: 602 ft: 609 exec/s: 0 rss: 36Mb
-#4	pulse  cov: 2268 ft: 2636 exec/s: 0 rss: 42Mb
-#8	pulse  cov: 2833 ft: 3933 exec/s: 0 rss: 45Mb
-#16	pulse  cov: 2964 ft: 4884 exec/s: 0 rss: 45Mb
-ALARM: working on the last Unit for 144 seconds
-       and the timeout value is 100 (use -timeout=N to change)
-MS: 0 ; base unit: 0000000000000000000000000000000000000000
-0xa,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x3f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-\012\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\000\000\000\000\000\000\000?\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377
-artifact_prefix='./'; Test unit written to ./timeout-e91bb8c3e3de7c220dd33b8f3d5a2af486201357
-Base64: Cv////////////////////8AAAAAAAAAP///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-==153== ERROR: libFuzzer: timeout after 144 seconds
-SUMMARY: libFuzzer: timeout
-MERGE-OUTER: attempt 6
-WARNING: Failed to find function "__sanitizer_acquire_crash_state".
-WARNING: Failed to find function "__sanitizer_print_stack_trace".
-WARNING: Failed to find function "__sanitizer_set_death_callback".
-INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 230492702
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x563b31ede110, 0x563b31ee1069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x563b31ee1070,0x563b31f10600), 
-INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: '/github/workspace/cifuzz-corpus/encode_decode/e91bb8c3e3de7c220dd33b8f3d5a2af486201357' caused a failure at the previous merge step
-MERGE-INNER: 91 total files; 69 processed earlier; will process 22 files now
-#1	pulse  cov: 1079 ft: 1080 exec/s: 0 rss: 35Mb
-#2	pulse  cov: 1079 ft: 1112 exec/s: 0 rss: 36Mb
-#4	pulse  cov: 2891 ft: 3738 exec/s: 0 rss: 43Mb
-ALARM: working on the last Unit for 103 seconds
-       and the timeout value is 100 (use -timeout=N to change)
-MS: 0 ; base unit: 0000000000000000000000000000000000000000
-0xa,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x0,0x0,0x0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x1f,0xa,0x0,0x0,0x0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xf7,0xff,0xff,0xff,0xff,0xff,
-\012\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\000\000\000\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\037\012\000\000\000\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\367\377\377\377\377\377
-artifact_prefix='./'; Test unit written to ./timeout-9352183fb7f69f1e06aa5e89c8c6cdf4b1bf62b5
-Base64: Cv////////////////////////8AAAD//////////////////////////////////////////////////////////////////////////////////////////////x8KAAAA///////////////////////////////////////////////////////////////////////////////3//////8=
-==228== ERROR: libFuzzer: timeout after 103 seconds
-SUMMARY: libFuzzer: timeout
-MERGE-OUTER: attempt 7
-WARNING: Failed to find function "__sanitizer_acquire_crash_state".
-WARNING: Failed to find function "__sanitizer_print_stack_trace".
-WARNING: Failed to find function "__sanitizer_set_death_callback".
-INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 434506171
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x55978322f110, 0x559783232069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x559783232070,0x559783261600), 
-INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: '/github/workspace/cifuzz-corpus/encode_decode/9352183fb7f69f1e06aa5e89c8c6cdf4b1bf62b5' caused a failure at the previous merge step
-MERGE-INNER: 91 total files; 75 processed earlier; will process 16 files now
-#1	pulse  cov: 1932 ft: 1933 exec/s: 0 rss: 43Mb
-#2	pulse  cov: 2398 ft: 3304 exec/s: 0 rss: 44Mb
-#4	pulse  cov: 2478 ft: 3805 exec/s: 0 rss: 44Mb
-#8	pulse  cov: 2960 ft: 4890 exec/s: 0 rss: 46Mb
-ALARM: working on the last Unit for 106 seconds
-       and the timeout value is 100 (use -timeout=N to change)
-MS: 0 ; base unit: 0000000000000000000000000000000000000000
-0xa,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x0,0x0,0x0,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0x7a,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xef,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x1f,0xa,0x0,0x0,0x0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xf7,0xff,0xff,0xff,0xff,0xff,
-\012\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\000\000\000zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\357\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\037\012\000\000\000\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\367\377\377\377\377\377
-artifact_prefix='./'; Test unit written to ./timeout-8162816816d5221744279737f1889f7ade1110e0
-Base64: Cv////////////////////////8AAAB6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enr////////////////////////////////v/////////////////////////////////////////////////////////////x8KAAAA///////////////////////////////////////////////////////////////////////////////3//////8=
-==249== ERROR: libFuzzer: timeout after 106 seconds
-SUMMARY: libFuzzer: timeout
-MERGE-OUTER: attempt 8
-WARNING: Failed to find function "__sanitizer_acquire_crash_state".
-WARNING: Failed to find function "__sanitizer_print_stack_trace".
-WARNING: Failed to find function "__sanitizer_set_death_callback".
-INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 893520193
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x55958f868110, 0x55958f86b069), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x55958f86b070,0x55958f89a600), 
-INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: '/github/workspace/cifuzz-corpus/encode_decode/8162816816d5221744279737f1889f7ade1110e0' caused a failure at the previous merge step
-MERGE-INNER: 91 total files; 91 processed earlier; will process 0 files now
-#0	DONE   exec/s: 0 rss: 27Mb
-MERGE-OUTER: successful in 8 attempt(s)
-MERGE-OUTER: the control file has 180468 bytes
+#32	pulse  cov: 2991 ft: 5341 exec/s: 0 rss: 50Mb
+#64	pulse  cov: 3217 ft: 7264 exec/s: 0 rss: 52Mb
+#128	pulse  cov: 3426 ft: 10301 exec/s: 0 rss: 60Mb
+#146	DONE   cov: 3427 ft: 10355 exec/s: 0 rss: 60Mb
+MERGE-OUTER: successful in 1 attempt(s)
+MERGE-OUTER: the control file has 94007 bytes
 MERGE-OUTER: consumed 0Mb (29Mb rss) to parse the control file
-MERGE-OUTER: 49 new files with 8112 new features added; 3456 new coverage edges
+MERGE-OUTER: 95 new files with 10355 new features added; 3427 new coverage edges
