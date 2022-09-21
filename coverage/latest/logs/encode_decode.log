@@ -2,31 +2,31 @@ WARNING: Failed to find function "__sanitizer_acquire_crash_state".
 WARNING: Failed to find function "__sanitizer_print_stack_trace".
 WARNING: Failed to find function "__sanitizer_set_death_callback".
 INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 4095412479
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x5607bf02b250, 0x5607bf02e1a9), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x5607bf02e1b0,0x5607bf05d740), 
-MERGE-OUTER: 1075 files, 0 in the initial corpus, 0 processed earlier
+INFO: Seed: 781227063
+INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x55f362390250, 0x55f3623931a9), 
+INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x55f3623931b0,0x55f3623c2740), 
+MERGE-OUTER: 1453 files, 0 in the initial corpus, 0 processed earlier
 MERGE-OUTER: attempt 1
 WARNING: Failed to find function "__sanitizer_acquire_crash_state".
 WARNING: Failed to find function "__sanitizer_print_stack_trace".
 WARNING: Failed to find function "__sanitizer_set_death_callback".
 INFO: Running with entropic power schedule (0xFF, 100).
-INFO: Seed: 4095427169
-INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x558e4be1f250, 0x558e4be221a9), 
-INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x558e4be221b0,0x558e4be51740), 
+INFO: Seed: 781248868
+INFO: Loaded 1 modules   (12121 inline 8-bit counters): 12121 [0x556254a8f250, 0x556254a921a9), 
+INFO: Loaded 1 PC tables (12121 PCs): 12121 [0x556254a921b0,0x556254ac1740), 
 INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 1048576 bytes
-MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge57.txt'
-MERGE-INNER: 1075 total files; 0 processed earlier; will process 1075 files now
-#1	pulse  exec/s: 0 rss: 28Mb
-#2	pulse  exec/s: 0 rss: 28Mb
-#4	pulse  exec/s: 0 rss: 28Mb
-#8	pulse  exec/s: 0 rss: 28Mb
-#16	pulse  exec/s: 0 rss: 28Mb
-#32	pulse  cov: 3071 ft: 5046 exec/s: 0 rss: 47Mb
-#64	pulse  cov: 3560 ft: 9729 exec/s: 0 rss: 56Mb
-#128	pulse  cov: 3793 ft: 12444 exec/s: 0 rss: 63Mb
-#256	pulse  cov: 4053 ft: 15560 exec/s: 0 rss: 67Mb
-#512	pulse  cov: 4100 ft: 16809 exec/s: 0 rss: 69Mb
-#1024	pulse  cov: 4195 ft: 19629 exec/s: 0 rss: 78Mb
-==57== libFuzzer: run interrupted; exiting
-==60== libFuzzer: run interrupted; exiting
+MERGE-INNER: using the control file '/tmp/libFuzzerTemp.Merge56.txt'
+MERGE-INNER: 1453 total files; 0 processed earlier; will process 1453 files now
+#1	pulse  exec/s: 0 rss: 27Mb
+#2	pulse  exec/s: 0 rss: 27Mb
+#4	pulse  exec/s: 0 rss: 27Mb
+#8	pulse  exec/s: 0 rss: 27Mb
+#16	pulse  exec/s: 0 rss: 27Mb
+#32	pulse  cov: 3065 ft: 5609 exec/s: 0 rss: 52Mb
+#64	pulse  cov: 3746 ft: 10376 exec/s: 0 rss: 58Mb
+#128	pulse  cov: 3858 ft: 12531 exec/s: 0 rss: 66Mb
+#256	pulse  cov: 4079 ft: 16147 exec/s: 0 rss: 69Mb
+#512	pulse  cov: 4138 ft: 17689 exec/s: 0 rss: 73Mb
+==56== libFuzzer: run interrupted; exiting
+==59== libFuzzer: run interrupted; exiting
+==56== libFuzzer: run interrupted; exiting
