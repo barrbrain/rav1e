@@ -156,9 +156,6 @@ impl SpeedSettings {
 
     if speed >= 7 {
       settings.prediction.prediction_modes = PredictionModesSetting::Simple;
-    }
-
-    if speed >= 8 {
       // Multiref is enabled automatically if low_latency is false.
       //
       // If low_latency is true, enabling multiref allows using multiple
@@ -168,9 +165,11 @@ impl SpeedSettings {
       settings.fast_deblock = true;
     }
 
-    if speed >= 9 {
+    if speed >= 8 {
       settings.rdo_lookahead_frames = 10;
+    }
 
+    if speed >= 9 {
       // 8x8 is fast enough to use until very high speed levels,
       // because 8x8 with reduced TX set is faster but with equivalent
       // or better quality compared to 16x16 (to which reduced TX set does not apply).
