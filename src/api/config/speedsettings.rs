@@ -167,6 +167,7 @@ impl SpeedSettings {
 
     if speed >= 8 {
       settings.rdo_lookahead_frames = 10;
+      settings.lrf = false;
     }
 
     if speed >= 9 {
@@ -175,8 +176,6 @@ impl SpeedSettings {
       // or better quality compared to 16x16 (to which reduced TX set does not apply).
       settings.partition.partition_range =
         PartitionRange::new(BlockSize::BLOCK_16X16, BlockSize::BLOCK_32X32);
-
-      settings.lrf = false;
 
       // FIXME: With unknown reasons, inter_tx_split does not work if reduced_tx_set is false
       settings.transform.enable_inter_tx_split = true;
