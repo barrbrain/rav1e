@@ -176,13 +176,14 @@ impl SpeedSettings {
       settings.partition.partition_range =
         PartitionRange::new(BlockSize::BLOCK_16X16, BlockSize::BLOCK_32X32);
 
+      settings.lrf = false;
+
       // FIXME: With unknown reasons, inter_tx_split does not work if reduced_tx_set is false
       settings.transform.enable_inter_tx_split = true;
     }
 
     if speed >= 10 {
       settings.scene_detection_mode = SceneDetectionSpeed::Fast;
-      settings.lrf = false;
 
       settings.partition.partition_range =
         PartitionRange::new(BlockSize::BLOCK_32X32, BlockSize::BLOCK_32X32);
