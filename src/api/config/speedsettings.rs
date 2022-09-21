@@ -174,7 +174,7 @@ impl SpeedSettings {
       // because 8x8 with reduced TX set is faster but with equivalent
       // or better quality compared to 16x16 (to which reduced TX set does not apply).
       settings.partition.partition_range =
-        PartitionRange::new(BlockSize::BLOCK_16X16, BlockSize::BLOCK_64X64);
+        PartitionRange::new(BlockSize::BLOCK_16X16, BlockSize::BLOCK_32X32);
 
       // FIXME: With unknown reasons, inter_tx_split does not work if reduced_tx_set is false
       settings.transform.enable_inter_tx_split = true;
