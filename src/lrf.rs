@@ -86,12 +86,13 @@ const SGRPROJ_ALL_SETS: &[u8] =
 // 1st, 3rd, ... smallest params of each group.
 const SGRPROJ_REDUCED_SETS: &[u8] = &[1, 3, 5, 7, 9, 11, 13, 15];
 //Similar complexity to SGRPROJ_REDUCED_SETS, but with quality based pruning for low luma
-const SGRPROJ_PSY_LUMA_SETS: &[u8] = &[1, 3, 5, 7, 9, 11, 13, 15];
+const SGRPROJ_PSY_LUMA_SETS: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8];
 
 pub const fn get_sgr_sets(complexity: SGRComplexityLevel) -> &'static [u8] {
   match complexity {
     SGRComplexityLevel::Full => SGRPROJ_ALL_SETS,
     SGRComplexityLevel::Reduced => SGRPROJ_REDUCED_SETS,
+    SGRComplexityLevel::Psyluma => SGRPROJ_PSY_LUMA_SETS
   }
 }
 

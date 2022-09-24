@@ -78,7 +78,7 @@ impl Default for SpeedSettings {
       cdef: true,
       lrf: true,
       lru_on_skip: true,
-      sgr_complexity: SGRComplexityLevel::Full,
+      sgr_complexity: SGRComplexityLevel::Psyluma,
       segmentation: SegmentationLevel::Full,
       partition: PartitionSpeedSettings {
         encode_bottomup: true,
@@ -412,6 +412,7 @@ impl fmt::Display for SGRComplexityLevel {
       match self {
         SGRComplexityLevel::Full => "Full",
         SGRComplexityLevel::Reduced => "Reduced",
+        SGRComplexityLevel::Psyluma => "Psyluma",
       }
     )
   }
