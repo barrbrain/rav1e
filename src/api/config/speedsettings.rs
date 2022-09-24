@@ -402,6 +402,8 @@ pub enum SGRComplexityLevel {
   Full,
   /// Search a reduced set of sgr parameters
   Reduced,
+  /// Search with quality based pruning for low luma
+  Psyluma,
 }
 
 impl fmt::Display for SGRComplexityLevel {
