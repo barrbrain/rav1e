@@ -753,15 +753,40 @@ impl<T: Pixel> CodedFrameData<T> {
     }
   }
 
+  fn aq_luma_adjust(
+    mean_luma: u16, bit_depth: u8, is_hdr: bool,
+  ) -> DistortionScale {
+    // We want to use a lower scale for low luma areas,
+    // because lower scales are given more bits.
+    let mean_luma = mean_luma >> (bit_depth - 8);
+    let centroid = if is_hdr { 195.0 } else { 160.0 };
+    let min_multi = if is_hdr { 0.5 } else { 0.6 };
+    let multiplier = (1.0
+      + 2.5 * (mean_luma as f64 - centroid).powi(3) / 255u32.pow(3) as f64)
+      .max(min_multi);
+    DistortionScale::from(multiplier)
+  }
+
   // Assumes that we have already computed activity scales and distortion scales
   // Returns -0.5 log2(mean(scale))
-  pub fn compute_spatiotemporal_scores(&mut self) -> i64 {
+  pub fn compute_spatiotemporal_scores(&mut self, hdr: bool, bd: u8) -> i64 {
     let mut scores = self
       .distortion_scales
       .iter()
       .zip(self.activity_scales.iter())
       .map(|(&d, &a)| d * a)
       .collect::<Box<_>>();
+
+    // Adjust for low luma bias
+    for ((score, scale), &brightness) in scores
+      .iter_mut()
+      .zip(self.distortion_scales.iter_mut())
+      .zip(self.block_brightnesses.iter())
+    {
+      let mult = Self::aq_luma_adjust(brightness, bd, hdr);
+      *scale *= mult;
+      *score *= mult;
+    }
 
     let inv_mean = DistortionScale::inv_mean(&scores);
 

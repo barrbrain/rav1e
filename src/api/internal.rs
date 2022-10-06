@@ -1326,7 +1326,10 @@ impl<T: Pixel> ContextInner<T> {
           );
           coded_data.block_brightnesses =
             compute_block_brightnesses(&frame.planes[0]);
-          log_isqrt_mean_scale = coded_data.compute_spatiotemporal_scores();
+          let bd = self.config.bit_depth as u8;
+          let hdr = self.config.is_hdr();
+          log_isqrt_mean_scale =
+            coded_data.compute_spatiotemporal_scores(hdr, bd);
         } else {
           coded_data.activity_mask = ActivityMask::default();
           log_isqrt_mean_scale = coded_data.compute_temporal_scores();

@@ -82,38 +82,9 @@ fn segmentation_optimize_inner<T: Pixel>(
 
   // Minimize the total distance from a small set of values to all scales.
   // Find k-means of log(spatiotemporal scale), k in 3..=8
-  let is_hdr = fi.config.is_hdr();
   let c: ([_; 8], [_; 7], [_; 6], [_; 5], [_; 4], [_; 3]) = {
-    let frame_data = &fi.coded_frame_data.as_ref().unwrap();
-
-    // Adjust for low luma bias
-    let flat_scores = frame_data
-      .spatiotemporal_scores
-      .iter()
-      .copied()
-      .map(f64::from)
-      .collect::<Box<_>>();
-    // Have to use `fold` since `f64` is not `Ord`
-    let frame_score_max =
-      flat_scores.iter().fold(1.0f64, |max, &s| if s > max { s } else { max });
-    let frame_score_min =
-      flat_scores.iter().fold(1.0f64, |min, &s| if s < min { s } else { min });
-    let spatiotemporal_scores: Box<[DistortionScale]> = frame_data
-      .spatiotemporal_scores
-      .iter()
-      .zip(frame_data.block_brightnesses.iter())
-      .map(|(score, brightness)| {
-        let score = aq_luma_adjust(
-          f64::from(*score),
-          *brightness,
-          fi.config.bit_depth as u8,
-          is_hdr,
-        );
-        // We need to maintain the overall range of values within the frame
-        DistortionScale::from(score.max(frame_score_min).min(frame_score_max))
-      })
-      .collect();
-
+    let spatiotemporal_scores =
+      &fi.coded_frame_data.as_ref().unwrap().spatiotemporal_scores;
     let mut log2_scale_q11 = Vec::with_capacity(spatiotemporal_scores.len());
     log2_scale_q11.extend(spatiotemporal_scores.iter().map(|&s| s.blog16()));
     log2_scale_q11.sort_unstable();
@@ -215,18 +186,4 @@ fn segment_idx_from_distortion(
   threshold: &[DistortionScale; MAX_SEGMENTS - 1], s: DistortionScale,
 ) -> u8 {
   threshold.partition_point(|&t| s.0 < t.0) as u8
-}
-
-fn aq_luma_adjust(
-  score: f64, mean_luma: u16, bit_depth: u8, is_hdr: bool,
-) -> f64 {
-  // We want to use a lower scale for low luma areas,
-  // because lower scales are given more bits.
-  let mean_luma = mean_luma >> (bit_depth - 8);
-  let centroid = if is_hdr { 195.0 } else { 160.0 };
-  let min_multi = if is_hdr { 0.5 } else { 0.6 };
-  let multiplier = (1.0
-    + 2.5 * (mean_luma as f64 - centroid).powi(3) / 255u32.pow(3) as f64)
-    .max(min_multi);
-  score * multiplier
 }
