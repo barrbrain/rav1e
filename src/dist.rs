@@ -46,22 +46,23 @@ pub(crate) mod rust {
       let mut iter_org = slice_org[..w].chunks_exact(4);
       let mut iter_ref = slice_ref[..w].chunks_exact(4);
       for (chunk_org, chunk_ref) in iter_org.by_ref().zip(iter_ref.by_ref()) {
-        let chunk_org = wide::i32x4::from([
+        let chunk_org = [
           i32::cast_from(chunk_org[0]),
           i32::cast_from(chunk_org[1]),
           i32::cast_from(chunk_org[2]),
           i32::cast_from(chunk_org[3]),
-        ]);
-        let chunk_ref = wide::i32x4::from([
+        ];
+        let chunk_ref = [
           i32::cast_from(chunk_ref[0]),
           i32::cast_from(chunk_ref[1]),
           i32::cast_from(chunk_ref[2]),
           i32::cast_from(chunk_ref[3]),
-        ]);
-        let sad = (chunk_org - chunk_ref).abs();
-        for i in sad.to_array() {
-          sum += i as u32;
-        }
+        ];
+        sum += chunk_org
+          .iter()
+          .zip(chunk_ref)
+          .map(|(a, b)| (a - b).unsigned_abs())
+          .sum::<u32>();
       }
       sum += iter_org
         .remainder()
