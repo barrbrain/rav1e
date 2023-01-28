@@ -199,12 +199,13 @@ impl StorageBackend for WriterBase<WriterCounter> {
       >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT)) as u16
       + nms
       - 1;
-    let u = if fl < 32768 {
+    let mut u = {
       (((r as u32 >> 8) * (fl as u32 >> EC_PROB_SHIFT))
         >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT)) as u16
         + nms
-    } else {
-      r >> EC_LOG2_MIN_PROB
+    };
+    if fl >= 32768 {
+      u = r >> EC_LOG2_MIN_PROB;
     };
     let r = u - v;
     let d = r.leading_zeros();
