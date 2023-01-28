@@ -25,6 +25,7 @@ use std::io;
 pub const OD_BITRES: u8 = 3;
 const EC_PROB_SHIFT: u32 = 6;
 const EC_MIN_PROB: u32 = 4;
+const EC_LOG2_MIN_PROB: u32 = 2;
 type ec_window = u32;
 
 /// Public trait interface to a bitstream `Writer`: a `Counter` can be
@@ -192,10 +193,22 @@ impl WriterEncoder {
 impl StorageBackend for WriterBase<WriterCounter> {
   #[inline]
   fn store(&mut self, fl: u16, fh: u16, nms: u16) {
-    let (_l, r) = self.lr_compute(fl, fh, nms);
-    let d = r.leading_zeros() as usize;
+    let r = self.rng as u32;
+    debug_assert!(32768 <= r);
+    let u = if fl < 32768 {
+      (((r >> 8) * (fl as u32 >> EC_PROB_SHIFT))
+        >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT))
+        + nms as u32
+    } else {
+      r >> EC_LOG2_MIN_PROB
+    };
+    let v = (((r >> 8) * (fh as u32 >> EC_PROB_SHIFT))
+      >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT))
+      + (nms - 1) as u32;
+    let r = (u - v) as u16;
+    let d = r.leading_zeros();
 
-    self.s.bits += d;
+    self.s.bits += (d - EC_LOG2_MIN_PROB) as usize;
     self.rng = r << d;
   }
   #[inline]
