@@ -195,6 +195,10 @@ impl StorageBackend for WriterBase<WriterCounter> {
   fn store(&mut self, fl: u16, fh: u16, nms: u16) {
     let r = self.rng;
     debug_assert!(32768 <= r);
+    let v = (((r as u32 >> 8) * (fh as u32 >> EC_PROB_SHIFT))
+      >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT)) as u16
+      + nms
+      - 1;
     let u = if fl < 32768 {
       (((r as u32 >> 8) * (fl as u32 >> EC_PROB_SHIFT))
         >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT)) as u16
@@ -202,10 +206,6 @@ impl StorageBackend for WriterBase<WriterCounter> {
     } else {
       r >> EC_LOG2_MIN_PROB
     };
-    let v = (((r as u32 >> 8) * (fh as u32 >> EC_PROB_SHIFT))
-      >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT)) as u16
-      + nms
-      - 1;
     let r = u - v;
     let d = r.leading_zeros();
 
