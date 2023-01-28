@@ -193,19 +193,20 @@ impl WriterEncoder {
 impl StorageBackend for WriterBase<WriterCounter> {
   #[inline]
   fn store(&mut self, fl: u16, fh: u16, nms: u16) {
-    let r = self.rng as u32;
+    let r = self.rng;
     debug_assert!(32768 <= r);
     let u = if fl < 32768 {
-      (((r >> 8) * (fl as u32 >> EC_PROB_SHIFT))
-        >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT))
-        + nms as u32
+      (((r as u32 >> 8) * (fl as u32 >> EC_PROB_SHIFT))
+        >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT)) as u16
+        + nms
     } else {
       r >> EC_LOG2_MIN_PROB
     };
-    let v = (((r >> 8) * (fh as u32 >> EC_PROB_SHIFT))
-      >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT))
-      + (nms - 1) as u32;
-    let r = (u - v) as u16;
+    let v = (((r as u32 >> 8) * (fh as u32 >> EC_PROB_SHIFT))
+      >> (EC_LOG2_MIN_PROB + 7 - EC_PROB_SHIFT)) as u16
+      + nms
+      - 1;
+    let r = u - v;
     let d = r.leading_zeros();
 
     self.s.bits += (d - EC_LOG2_MIN_PROB) as usize;
