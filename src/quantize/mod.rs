@@ -328,7 +328,8 @@ impl QuantizationContext {
         self.ac_offset0
       };
 
-      let abs_qcoeff: u32 = divu_pair(abs_coeff + offset, self.ac_mul_add);
+      let abs_qcoeff: u32 = level0
+        + (abs_coeff >= level0 * self.ac_quant.get() as u32 + offset) as u32;
       if level_mode != 0 && abs_qcoeff == 0 {
         level_mode = 0;
       } else if abs_qcoeff > 1 {
