@@ -296,14 +296,14 @@ impl QuantizationContext {
         .iter()
         .zip(coeffs)
         .map(|(&i, &c)| if c.abs() >= deadzone { i } else { 0 })
-        .max();
+        .max()
+        .unwrap_or(0);
       // We skip the DC coefficient since it has its own quantizer index.
-      let eob_minus_two = eob_minus_one
-        .map(|n| if n > 0 { Some(n as usize - 1) } else { None })
-        .flatten();
-      eob_minus_two
-        .map(|n| n + 2)
-        .unwrap_or_else(|| usize::from(qcoeffs[0] != T::cast_from(0)))
+      if eob_minus_one > 0 {
+        eob_minus_one as usize + 1
+      } else {
+        usize::from(qcoeffs[0] != T::cast_from(0))
+      }
     };
 
     // Here we use different rounding biases depending on whether we've
