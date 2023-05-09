@@ -264,7 +264,7 @@ const Z3: Fill = Fill(
 );
 
 unsafe fn ipred_z1<T: Pixel>(
-  dst: *mut T, stride: ptrdiff_t, src: *const T, angle: c_int, w: c_int,
+  dst: *mut T, stride: ptrdiff_t, src: *const T, angle: isize, w: c_int,
   h: c_int, bd_max: c_int, edge_filter: bool, smooth_filter: bool,
 ) {
   let mut dx = dr_intra_derivative(angle as _) as c_int;
@@ -272,15 +272,14 @@ unsafe fn ipred_z1<T: Pixel>(
   let out = out.as_mut_ptr() as *mut T;
 
   let upsample_above = edge_filter
-    && select_ief_upsample(w as _, h as _, smooth_filter, 90 - angle as isize);
+    && select_ief_upsample(w as _, h as _, smooth_filter, 90 - angle);
   let max_base_x = if upsample_above {
     ipred_z1_upsample_edge(out, w + h, src, w + w.min(h), bd_max);
     dx <<= 1;
     2 * (w + h) - 2
   } else {
     let strength =
-      select_ief_strength(w as _, h as _, smooth_filter, 90 - angle as isize)
-        as c_int;
+      select_ief_strength(w as _, h as _, smooth_filter, 90 - angle) as c_int;
     if strength != 0 {
       ipred_z1_filter_edge(out, w + h, src, w + w.min(h), strength);
       w + h - 1
@@ -303,23 +302,18 @@ unsafe fn ipred_z1<T: Pixel>(
 }
 
 unsafe fn ipred_z3<T: Pixel>(
-  dst: *mut T, stride: ptrdiff_t, src: *const T, angle: c_int, w: c_int,
+  dst: *mut T, stride: ptrdiff_t, src: *const T, angle: isize, w: c_int,
   h: c_int, bd_max: c_int, edge_filter: bool, smooth_filter: bool,
 ) {
   assert!(angle > 180);
-  let mut dy = dr_intra_derivative(270 - angle as usize) as c_int;
+  let mut dy = dr_intra_derivative(270 - angle as _) as c_int;
   let mut tmp = [MaybeUninit::<T>::uninit(); MAX_TX_SIZE * 4 + 16];
   let mut out = [MaybeUninit::<T>::uninit(); MAX_TX_SIZE * 8 + 15 * 2];
   let out = out.as_mut_ptr() as *mut T;
   let tmp = tmp.as_mut_ptr() as *mut T;
 
   let upsample_left = edge_filter
-    && select_ief_upsample(
-      w as _,
-      h as _,
-      smooth_filter,
-      angle as isize - 180,
-    );
+    && select_ief_upsample(w as _, h as _, smooth_filter, angle - 180);
   let max_base_y = if upsample_left {
     tmp.write(src.read());
     ipred_reverse(tmp.add(1), src, h + w.max(h));
@@ -328,8 +322,7 @@ unsafe fn ipred_z3<T: Pixel>(
     2 * (w + h) - 2
   } else {
     let strength =
-      select_ief_strength(w as _, h as _, smooth_filter, angle as isize - 180)
-        as c_int;
+      select_ief_strength(w as _, h as _, smooth_filter, angle - 180) as c_int;
     if strength != 0 {
       tmp.write(src.read());
       ipred_reverse(tmp.add(1), src, h + w.max(h));
