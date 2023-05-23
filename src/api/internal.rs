@@ -1227,7 +1227,9 @@ impl<T: Pixel> ContextInner<T> {
         .unwrap()
         .fi;
       let coded_data = fi.coded_frame_data.as_mut().unwrap();
-      coded_data.compute_distortion_scales();
+      if self.config.temporal_rdo() {
+        coded_data.compute_distortion_scales();
+      }
       #[cfg(feature = "dump_lookahead_data")]
       {
         use byteorder::{NativeEndian, WriteBytesExt};
@@ -1269,9 +1271,10 @@ impl<T: Pixel> ContextInner<T> {
         // Estimate the mean scale from the first P-frame.
         if cur_keyframe && !next_keyframe {
           let coded_data = fi.coded_frame_data.as_mut().unwrap();
-          coded_data.compute_distortion_scales();
-          ref_log_isqrt_mean_scale = if self.config.tune == Tune::Psychovisual
-          {
+          if self.config.temporal_rdo() {
+            coded_data.compute_distortion_scales();
+          }
+          if self.config.tune == Tune::Psychovisual {
             let frame = self.frame_q[&fi.input_frameno].as_ref().unwrap();
             coded_data.activity_mask =
               ActivityMask::from_plane(&frame.planes[0]);
@@ -1279,9 +1282,14 @@ impl<T: Pixel> ContextInner<T> {
               fi.sequence.bit_depth,
               &mut coded_data.activity_scales,
             );
-            coded_data.compute_spatiotemporal_scores()
-          } else {
-            coded_data.compute_temporal_scores()
+          }
+          ref_log_isqrt_mean_scale = match (
+            self.config.tune == Tune::Psychovisual,
+            self.config.temporal_rdo(),
+          ) {
+            (true, _) => coded_data.compute_spatiotemporal_scores(),
+            (false, true) => coded_data.compute_temporal_scores(),
+            (false, false) => 0,
           };
         }
         // Propagate the estimated mean scale to all frames in the group.
@@ -1386,7 +1394,7 @@ impl<T: Pixel> ContextInner<T> {
     let mut dyn_rel_q = DynRelQ::Static;
 
     if let Some(coded_data) = frame_data.fi.coded_frame_data.as_mut() {
-      dyn_rel_q = if self.config.tune == Tune::Psychovisual {
+      if self.config.tune == Tune::Psychovisual {
         let frame =
           self.frame_q[&frame_data.fi.input_frameno].as_ref().unwrap();
         coded_data.activity_mask = ActivityMask::from_plane(&frame.planes[0]);
@@ -1394,10 +1402,23 @@ impl<T: Pixel> ContextInner<T> {
           frame_data.fi.sequence.bit_depth,
           &mut coded_data.activity_scales,
         );
-        DynRelQ::Spatiotemporal(coded_data.compute_spatiotemporal_scores())
-      } else {
-        coded_data.activity_mask = ActivityMask::default();
-        DynRelQ::Temporal(coded_data.compute_temporal_scores())
+      }
+      dyn_rel_q = match (
+        self.config.tune == Tune::Psychovisual,
+        self.config.temporal_rdo(),
+      ) {
+        (true, true) => DynRelQ::Spatiotemporal(
+          coded_data.compute_spatiotemporal_scores()
+            - frame_data.fi.ref_log_isqrt_mean_scale,
+        ),
+        (true, false) => {
+          DynRelQ::Spatial(coded_data.compute_spatiotemporal_scores())
+        }
+        (false, true) => DynRelQ::Temporal(
+          coded_data.compute_temporal_scores()
+            - frame_data.fi.ref_log_isqrt_mean_scale,
+        ),
+        (false, false) => DynRelQ::Static,
       };
       #[cfg(feature = "dump_lookahead_data")]
       {
