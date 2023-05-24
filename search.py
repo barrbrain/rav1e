@@ -3,6 +3,7 @@ import threading
 import numpy as np
 from scipy.interpolate import pchip_interpolate
 from scipy.optimize import minimize
+from multiprocessing import Pool
 
 CORPUS_SIZE = 2
 
@@ -10,6 +11,10 @@ sequences = dict()
 counter = collections.Counter()
 events = collections.defaultdict(threading.Event)
 enqueue = None
+
+
+def task(s, log_q_to_s):
+    return s.pixels * s.bd_rate(log_q_to_s)
 
 
 def run():
@@ -41,6 +46,15 @@ def run():
         wait_results(samples)
         return mean_bd_rate(log_q_to_s)
 
+    def mean_bd_rate(log_q_to_s):
+        total_pixels = sum(s.pixels for s in sequences.values())
+        weighted_total = 0
+        for partial_sum in pool.starmap(task, [(s, log_q_to_s)
+                                               for s in sequences.values()]):
+            weighted_total += partial_sum
+        return weighted_total / total_pixels
+
+    pool = Pool(16)
     samples = [(q, s) for q in quantizers for s in bounds]
     wait_results(samples)
     for sequence in sequences.values():
@@ -48,17 +62,13 @@ def run():
     options = {"disp": True}
     bounds = [(bounds[0], bounds[1])] * 2
     x0 = (2.5, 2.5)
-    for exp in range(3, 20):
+    for exp in range(4, 21):
         args = (3.0 / 2**exp, )
-        print(minimize(measure, x0, args=args, bounds=bounds, options=options))
+        r = minimize(measure, x0, args=args, bounds=bounds, options=options)
+        print(r.x.tolist())
+        print(r)
+        x0 = r.x
     enqueue([None])
-
-
-def mean_bd_rate(log_q_to_s):
-    total_pixels = sum(s.pixels for s in sequences.values())
-    weighted_total = sum(s.pixels * s.bd_rate(log_q_to_s)
-                         for s in sequences.values())
-    return weighted_total / total_pixels
 
 
 def open(enqueue_fn):
