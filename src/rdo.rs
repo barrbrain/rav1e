@@ -503,7 +503,7 @@ pub fn spatiotemporal_scale<T: Pixel>(
 }
 
 pub fn distortion_scale_for(
-  propagate_cost: f64, intra_cost: f64,
+  propagate_cost: f64, intra_cost: f64, strength: f64,
 ) -> DistortionScale {
   // The mbtree paper \cite{mbtree} uses the following formula:
   //
@@ -544,11 +544,11 @@ pub fn distortion_scale_for(
     return DistortionScale::default(); // no scaling
   }
 
-  // strength = 3.0 (empirical, see comment above)
   let frac = (intra_cost + propagate_cost) / intra_cost;
   //   frac^(strength / 3)
-  // = frac
-  frac.into()
+  // = frac^(7/8)
+  // = frac / frac^(1/8)
+  frac.powf(strength / 3.0).into()
 }
 
 /// Fixed point arithmetic version of distortion scale
