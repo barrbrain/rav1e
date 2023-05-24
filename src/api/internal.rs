@@ -1475,6 +1475,8 @@ impl<T: Pixel> ContextInner<T> {
       frame_data.fi.set_quantizers(&qps);
     }
 
+    println!("{} {} {}", fti, qps.log_base_q, dyn_rel_q.log_dyn_target_q(qps.log_base_q, qps.log_target_q));
+
     let data =
       encode_frame(&frame_data.fi, &mut frame_data.fs, &self.inter_cfg);
     #[cfg(feature = "dump_lookahead_data")]
