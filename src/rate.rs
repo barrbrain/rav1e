@@ -522,11 +522,36 @@ fn chroma_offset(
   (0x19D_5D9F_D501_0B37 - y, 0xA4_D3C2_5E68_DC58 - y)
 }
 
+#[derive(Copy, Clone)]
+pub(crate) enum DynRelQ {
+  Static,
+  Temporal(i64),
+  #[allow(unused)]
+  Spatial(i64),
+  Spatiotemporal(i64),
+}
+
+impl DynRelQ {
+  fn log_dyn_target_q(self, log_base_q: i64, log_target_q: i64) -> i64 {
+    match self {
+      Self::Static => log_target_q,
+      Self::Spatial(log_isqrt_mean_scale) => {
+        log_target_q + log_isqrt_mean_scale
+      }
+      Self::Temporal(log_isqrt_rel_scale) => {
+        log_target_q + log_isqrt_rel_scale
+      }
+      Self::Spatiotemporal(log_isqrt_rel_scale) => {
+        log_target_q + log_isqrt_rel_scale
+      }
+    }
+  }
+}
+
 impl QuantizerParameters {
   fn new_from_log_q(
     log_base_q: i64, log_target_q: i64, bit_depth: usize,
-    chroma_sampling: ChromaSampling, is_intra: bool,
-    log_isqrt_mean_scale: i64,
+    chroma_sampling: ChromaSampling, is_intra: bool, dyn_rel_q: DynRelQ,
   ) -> QuantizerParameters {
     let scale = log_isqrt_mean_scale + q57(QSCALE + bit_depth as i32 - 8);
 
@@ -715,7 +740,7 @@ impl RCState {
       bit_depth,
       chroma_sampling,
       fti == 0,
-      0,
+      DynRelQ::Static,
     )
   }
 
@@ -723,7 +748,7 @@ impl RCState {
   #[hawktracer(select_qi)]
   pub(crate) fn select_qi<T: Pixel>(
     &self, ctx: &ContextInner<T>, output_frameno: u64, fti: usize,
-    maybe_prev_log_base_q: Option<i64>, log_isqrt_mean_scale: i64,
+    maybe_prev_log_base_q: Option<i64>, dyn_rel_q: DynRelQ,
   ) -> QuantizerParameters {
     // Is rate control active?
     if self.target_bitrate <= 0 {
@@ -739,7 +764,7 @@ impl RCState {
         bit_depth,
         chroma_sampling,
         fti == 0,
-        log_isqrt_mean_scale,
+        dyn_rel_q,
       )
     } else {
       let mut nframes: [i32; FRAME_NSUBTYPES + 1] = [0; FRAME_NSUBTYPES + 1];
@@ -1038,7 +1063,7 @@ impl RCState {
         bit_depth,
         chroma_sampling,
         fti == 0,
-        log_isqrt_mean_scale,
+        dyn_rel_q,
       )
     }
   }
@@ -1262,7 +1287,9 @@ impl RCState {
     &self, ctx: &ContextInner<T>, output_frameno: u64,
   ) -> i64 {
     assert_eq!(self.twopass_state, PASS_SINGLE);
-    self.select_qi(ctx, output_frameno, FRAME_SUBTYPE_I, None, 0).log_base_q
+    self
+      .select_qi(ctx, output_frameno, FRAME_SUBTYPE_I, None, DynRelQ::Static)
+      .log_base_q
   }
 
   // Initialize the first pass and emit a placeholder summary
