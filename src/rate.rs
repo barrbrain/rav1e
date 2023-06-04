@@ -63,22 +63,24 @@ const INTER_DELAY_TARGET_MIN: i32 = 10;
 //  coefficients (which depends on the pixel bit depth and the transform
 //  scale), we normalize the quantizer to the equivalent for 8-bit pixels with
 //  orthonormal transforms for the purposes of rate modeling.
+// These values were found by linear regression with the MSU FullHD comparison
+//  2021 sequences.
 const MQP_Q12: &[i32; FRAME_NSUBTYPES] = &[
   // TODO: Use a const function once f64 operations in const functions are
   //  stable.
+  (1.000732421875 * (1 << 12) as f64) as i32,
   (1.0 * (1 << 12) as f64) as i32,
-  (1.0 * (1 << 12) as f64) as i32,
-  (1.0 * (1 << 12) as f64) as i32,
-  (1.0 * (1 << 12) as f64) as i32,
+  (1.002197265625 * (1 << 12) as f64) as i32,
+  (1.0029296875 * (1 << 12) as f64) as i32,
 ];
 
-// The ratio 33_810_170.0 / 86_043_287.0 was derived by approximating the median
-// of a change of 15 quantizer steps in the quantizer tables.
+// These values were found by linear regression with the MSU FullHD comparison
+//  2021 sequences.
 const DQP_Q57: &[i64; FRAME_NSUBTYPES] = &[
-  (-(33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
+  (-0.20848870152399065 * (1i64 << 57) as f64) as i64,
   (0.0 * (1i64 << 57) as f64) as i64,
-  ((33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
-  (2.0 * (33_810_170.0 / 86_043_287.0) * (1i64 << 57) as f64) as i64,
+  (0.4398106283604967 * (1i64 << 57) as f64) as i64,
+  (0.6900178441263356 * (1i64 << 57) as f64) as i64,
 ];
 
 // For 8-bit-depth inter frames, log_q_y is derived from log_target_q with a
