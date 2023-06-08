@@ -531,7 +531,7 @@ pub(crate) enum DynRelQ {
 }
 
 impl DynRelQ {
-  fn log_dyn_target_q(self, log_base_q: i64, log_target_q: i64) -> i64 {
+  pub fn log_dyn_target_q(self, log_base_q: i64, log_target_q: i64) -> i64 {
     match self {
       Self::Static => log_target_q,
       Self::Spatial(log_isqrt_mean_scale) => {

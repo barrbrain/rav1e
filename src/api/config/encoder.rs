@@ -114,9 +114,6 @@ pub struct EncoderConfig {
 
   /// Settings which affect the encoding speed vs. quality trade-off.
   pub speed_settings: SpeedSettings,
-
-  /// Temporal strength factor
-  pub temporal_strength: f64,
 }
 
 /// Default preset for `EncoderConfig`: it is a balance between quality and
@@ -174,7 +171,6 @@ impl EncoderConfig {
       tile_rows: 0,
       tiles: 0,
       speed_settings: SpeedSettings::from_preset(speed),
-      temporal_strength: 1.0,
     }
   }
 
@@ -342,7 +338,6 @@ impl fmt::Display for EncoderConfig {
         "use_satd_subpel",
         self.speed_settings.motion.use_satd_subpel.to_string(),
       ),
-      ("temporal_strength", self.temporal_strength.to_string()),
     ];
     write!(
       f,

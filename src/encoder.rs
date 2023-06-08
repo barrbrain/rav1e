@@ -710,14 +710,10 @@ pub struct CodedFrameData<T: Pixel> {
   pub activity_mask: ActivityMask,
   /// Combined metric of activity and distortion
   pub spatiotemporal_scores: Box<[DistortionScale]>,
-  /// Temporal strength factor
-  pub temporal_strength: f64,
 }
 
 impl<T: Pixel> CodedFrameData<T> {
-  pub fn new(
-    fi: &FrameInvariants<T>, temporal_strength: f64,
-  ) -> CodedFrameData<T> {
+  pub fn new(fi: &FrameInvariants<T>) -> CodedFrameData<T> {
     // Width and height are padded to 8×8 block size.
     let w_in_imp_b = fi.w_in_b / 2;
     let h_in_imp_b = fi.h_in_b / 2;
@@ -742,7 +738,6 @@ impl<T: Pixel> CodedFrameData<T> {
       .into_boxed_slice(),
       activity_mask: Default::default(),
       spatiotemporal_scores: Default::default(),
-      temporal_strength,
     }
   }
 
@@ -758,7 +753,6 @@ impl<T: Pixel> CodedFrameData<T> {
       *distortion_scale = crate::rdo::distortion_scale_for(
         propagate_cost as f64,
         intra_cost as f64,
-        self.temporal_strength,
       );
     }
   }
@@ -977,11 +971,10 @@ impl<T: Pixel> FrameInvariants<T> {
     gop_input_frameno_start: u64, t35_metadata: Box<[T35]>,
   ) -> Self {
     let tx_mode_select = config.speed_settings.transform.rdo_tx_decision;
-    let strength = config.temporal_strength;
     let mut fi = Self::new(config, sequence);
     fi.input_frameno = gop_input_frameno_start;
     fi.tx_mode_select = tx_mode_select;
-    fi.coded_frame_data = Some(CodedFrameData::new(&fi, strength));
+    fi.coded_frame_data = Some(CodedFrameData::new(&fi));
     fi.t35_metadata = t35_metadata;
     fi
   }

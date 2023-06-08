@@ -248,9 +248,6 @@ pub struct CliOptions {
   /// Outputs a Y4M file containing the output from the decoder
   #[clap(long, short, value_parser, help_heading = "DEBUGGING")]
   pub reconstruction: Option<PathBuf>,
-  /// Temporal strength factor
-  #[clap(long, help_heading = "DEBUGGING")]
-  pub strength: f64,
 
   #[clap(subcommand)]
   pub command: Option<Commands>,
@@ -689,10 +686,6 @@ fn parse_config(matches: &CliOptions) -> Result<EncoderConfig, CliError> {
   // Disables scene_detection
   if matches.no_scene_detection {
     cfg.speed_settings.scene_detection_mode = SceneDetectionSpeed::None;
-  }
-
-  if matches.strength > 0. {
-    cfg.temporal_strength = matches.strength;
   }
 
   Ok(cfg)
