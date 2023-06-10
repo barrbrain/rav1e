@@ -528,8 +528,8 @@ pub fn distortion_scale_for(
   //     scale = 2^(QP_delta / -3)
   //           = (1 + (propagate_cost / intra_cost))^(strength / 3)
   //
-  //  The original paper empirically chooses strength = 2.0, but strength = 2.083
-  //  seems to work best in rav1e currently,
+  //  The original paper empirically chooses strength = 2.0, but strength = 2.6
+  //  seems to work best in rav1e currently, minimising the worst-case BD-rates.
   //
   // @article{mbtree,
   //   title={A novel macroblock-tree algorithm for high-performance
@@ -544,11 +544,10 @@ pub fn distortion_scale_for(
     return DistortionScale::default(); // no scaling
   }
 
-  // strength = 3 * 711 / 1024 ~= 2.083 (empirical, see comment above)
+  // strength = 2.6 (empirical, see comment above)
   let frac = (intra_cost + propagate_cost) / intra_cost;
   //   frac^(strength / 3)
-  // = frac^(711 / 1024)
-  frac.powf(711.0 / 1024.0).into()
+  frac.powf(2.6 / 3.0).into()
 }
 
 /// Fixed point arithmetic version of distortion scale
