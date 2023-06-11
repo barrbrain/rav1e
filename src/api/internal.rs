@@ -1219,6 +1219,23 @@ impl<T: Pixel> ContextInner<T> {
     }
 
     if !output_framenos.is_empty() {
+      let maybe_prev_log_base_q = self.maybe_prev_log_base_q;
+      let fi = &self
+        .frame_data
+        .get_mut(&output_framenos[0])
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .fi;
+      let fti = fi.get_frame_subtype();
+      let qps = self.rc_state.select_qi(
+        self,
+        output_framenos[0],
+        fti,
+        maybe_prev_log_base_q,
+        DynRelQ::Static,
+      );
+      let log_base_q = qps.log_base_q;
       let fi = &mut self
         .frame_data
         .get_mut(&output_framenos[0])
@@ -1228,7 +1245,7 @@ impl<T: Pixel> ContextInner<T> {
         .fi;
       let coded_data = fi.coded_frame_data.as_mut().unwrap();
       if self.config.temporal_rdo() {
-        coded_data.compute_distortion_scales();
+        coded_data.compute_distortion_scales(log_base_q);
       }
       #[cfg(feature = "dump_lookahead_data")]
       {
@@ -1272,7 +1289,7 @@ impl<T: Pixel> ContextInner<T> {
         if cur_keyframe && !next_keyframe {
           let coded_data = fi.coded_frame_data.as_mut().unwrap();
           if self.config.temporal_rdo() {
-            coded_data.compute_distortion_scales();
+            coded_data.compute_distortion_scales(log_base_q);
           }
           if self.config.tune == Tune::Psychovisual {
             let frame = self.frame_q[&fi.input_frameno].as_ref().unwrap();
