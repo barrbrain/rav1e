@@ -20,7 +20,7 @@ pool = Pool(64)
 jobs = []
 
 for f in sys.argv[1:]:
-  tasks = [(s, f, q) for s in [1, 5, 8, 10] for q in [78, 98, 118, 138, 158, 188]]
+  tasks = [(s, f, q) for s in [5, 8] for q in [78, 98, 118, 138, 158, 188]]
   jobs.append((f, pool.starmap_async(collect_q, tasks)))
 
 while jobs:
