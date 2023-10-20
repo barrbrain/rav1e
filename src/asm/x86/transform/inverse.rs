@@ -14,7 +14,6 @@ use crate::transform::*;
 use crate::{Pixel, PixelType};
 
 use crate::asm::shared::transform::inverse::*;
-use crate::asm::shared::transform::*;
 
 pub fn inverse_transform_add<T: Pixel>(
   input: &[T::Coeff], output: &mut PlaneRegionMut<'_, T>, eob: usize,
@@ -37,9 +36,7 @@ pub fn inverse_transform_add<T: Pixel>(
   }
   match T::type_enum() {
     PixelType::U8 => {
-      if let Some(func) = INV_TXFM_FNS[cpu.as_index()]
-        [get_tx_size_idx(tx_size)][get_tx_type_idx(tx_type)]
-      {
+      if let Some(func) = INV_TXFM_FNS[cpu.as_index()][tx_size][tx_type] {
         return call_inverse_func(
           func,
           input,
@@ -52,8 +49,7 @@ pub fn inverse_transform_add<T: Pixel>(
       }
     }
     PixelType::U16 if bd == 10 => {
-      if let Some(func) = INV_TXFM_HBD_FNS_10[cpu.as_index()]
-        [get_tx_size_idx(tx_size)][get_tx_type_idx(tx_type)]
+      if let Some(func) = INV_TXFM_HBD_FNS_10[cpu.as_index()][tx_size][tx_type]
       {
         return call_inverse_hbd_func(
           func,
@@ -67,8 +63,7 @@ pub fn inverse_transform_add<T: Pixel>(
       }
     }
     PixelType::U16 => {
-      if let Some(func) = INV_TXFM_HBD_FNS_12[cpu.as_index()]
-        [get_tx_size_idx(tx_size)][get_tx_type_idx(tx_type)]
+      if let Some(func) = INV_TXFM_HBD_FNS_12[cpu.as_index()][tx_size][tx_type]
       {
         return call_inverse_hbd_func(
           func,
@@ -146,7 +141,7 @@ macro_rules! decl_itx_fns {
         let mut out: [Option<InvTxfmFunc>; 16] = [None; 16];
         $(
           $(
-            out[get_tx_type_idx($ENUM)] = Some([<rav1e_inv_txfm_add_$TYPE2 _$TYPE1 _$W x $H _8bpc_$OPT_LOWER>]);
+            out[$ENUM as usize] = Some([<rav1e_inv_txfm_add_$TYPE2 _$TYPE1 _$W x $H _8bpc_$OPT_LOWER>]);
           )*
         )*
         out
@@ -178,7 +173,7 @@ macro_rules! decl_itx_hbd_fns {
         let mut out: [Option<InvTxfmHBDFunc>; 16] = [None; 16];
         $(
           $(
-            out[get_tx_type_idx($ENUM)] = Some([<rav1e_inv_txfm_add_$TYPE2 _$TYPE1 _$W x $H _ $BPC bpc_$OPT_LOWER>]);
+            out[$ENUM as usize] = Some([<rav1e_inv_txfm_add_$TYPE2 _$TYPE1 _$W x $H _ $BPC bpc_$OPT_LOWER>]);
           )*
         )*
         out
@@ -196,7 +191,7 @@ macro_rules! create_wxh_tables {
         // For each dimension, add an entry to the table
         $(
           $(
-            out[get_tx_size_idx(TxSize::[<TX_ $W X $H>])] = [<INV_TXFM_FNS_$W _$H _$OPT_UPPER>];
+            out[TxSize::[<TX_ $W X $H>] as usize] = [<INV_TXFM_FNS_$W _$H _$OPT_UPPER>];
           )*
         )*
         out
@@ -221,7 +216,7 @@ macro_rules! create_wxh_hbd_tables {
         // For each dimension, add an entry to the table
         $(
           $(
-            out[get_tx_size_idx(TxSize::[<TX_ $W X $H>])] = [<INV_TXFM_HBD_FNS_$W _$H _$BPC _$OPT_UPPER>];
+            out[TxSize::[<TX_ $W X $H>] as usize] = [<INV_TXFM_HBD_FNS_$W _$H _$BPC _$OPT_UPPER>];
           )*
         )*
         out
