@@ -683,40 +683,33 @@ endfunc
 .endm
 
 .macro SUM_HADAMARD_8X8 \
-       a0 a1 a2 a3 a4 a5 a6 a7 \
-       b0 b1 b2 b3 b4 b5 b6 b7
+       a0 a1 a2 a3 a4 a5 a6 a7
 
     // absolute value of transform coefficients
-    abs  v\b0\().8h, v\b0\().8h
-    abs  v\b1\().8h, v\b1\().8h
-    abs  v\b2\().8h, v\b2\().8h
-    abs  v\b3\().8h, v\b3\().8h
-    abs  v\b4\().8h, v\b4\().8h
-    abs  v\b5\().8h, v\b5\().8h
-    abs  v\b6\().8h, v\b6\().8h
-    abs  v\b7\().8h, v\b7\().8h
+    abs  v\a0\().8h, v\a0\().8h
+    abs  v\a1\().8h, v\a1\().8h
+    abs  v\a2\().8h, v\a2\().8h
+    abs  v\a3\().8h, v\a3\().8h
+    abs  v\a4\().8h, v\a4\().8h
+    abs  v\a5\().8h, v\a5\().8h
+    abs  v\a6\().8h, v\a6\().8h
+    abs  v\a7\().8h, v\a7\().8h
 
     // stage 1 sum
-    sxtl v\a0\().4s, v\b0\().4h
-    sxtl v\a1\().4s, v\b1\().4h
-    sxtl v\a2\().4s, v\b2\().4h
-    sxtl v\a3\().4s, v\b3\().4h
-    saddw2  v\a0\().4s, v\a0\().4s, v\b0\().8h
-    saddw2  v\a1\().4s, v\a1\().4s, v\b1\().8h
-    saddw2  v\a2\().4s, v\a2\().4s, v\b2\().8h
-    saddw2  v\a3\().4s, v\a3\().4s, v\b3\().8h
-    saddw   v\a0\().4s, v\a0\().4s, v\b4\().4h
-    saddw2  v\a1\().4s, v\a1\().4s, v\b4\().8h
-    saddw   v\a2\().4s, v\a2\().4s, v\b5\().4h
-    saddw2  v\a3\().4s, v\a3\().4s, v\b5\().8h
-    saddw   v\a0\().4s, v\a0\().4s, v\b6\().4h
-    saddw2  v\a1\().4s, v\a1\().4s, v\b6\().8h
-    saddw   v\a2\().4s, v\a2\().4s, v\b7\().4h
-    saddw2  v\a3\().4s, v\a3\().4s, v\b7\().8h
+    add  v\a1\().8h, v\a1\().8h, v\a0\().8h
+    add  v\a3\().8h, v\a3\().8h, v\a2\().8h
+    add  v\a5\().8h, v\a5\().8h, v\a4\().8h
+    add  v\a7\().8h, v\a7\().8h, v\a6\().8h
 
     // stage 2 sum
-    add  v\a0\().4s, v\a0\().4s, v\a1\().4s
-    add  v\a2\().4s, v\a2\().4s, v\a3\().4s
+    sxtl v\a0\().4s, v\a1\().4h
+    sxtl v\a2\().4s, v\a3\().4h
+    saddw2  v\a0\().4s, v\a0\().4s, v\a1\().8h
+    saddw2  v\a2\().4s, v\a2\().4s, v\a3\().8h
+    saddw   v\a0\().4s, v\a0\().4s, v\a5\().4h
+    saddw2  v\a2\().4s, v\a2\().4s, v\a5\().8h
+    saddw   v\a0\().4s, v\a0\().4s, v\a7\().4h
+    saddw2  v\a2\().4s, v\a2\().4s, v\a7\().8h
 
     // stage 3 sum
     add  v0.4s, v\a0\().4s, v\a2\().4s
@@ -736,7 +729,6 @@ endfunc
     \b0, \b1, \b2, \b3, \b4, \b5, \b6, \b7
 
     SUM_HADAMARD_8X8 \
-    \a0, \a1, \a2, \a3, \a4, \a5, \a6, \a7, \
     \b0, \b1, \b2, \b3, \b4, \b5, \b6, \b7
 .endm
 
