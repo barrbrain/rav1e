@@ -1263,3 +1263,67 @@ satd_x8up_hbd 64, 64
 satd_x8up_hbd 64, 128
 satd_x8up_hbd 128, 64
 satd_x8up_hbd 128, 128
+
+// x0: src: *const u16,
+// x1: src_stride: isize,
+// x2: dst: *const u16,
+// x3: dst_stride: isize,
+function satd4x4_hbd_neon, export=1
+    #define src         x0
+    #define src_stride  x1
+    #define dst         x2
+    #define dst_stride  x3
+
+    ldr   d0, [src]
+    ldr   d1, [dst]
+    sub   v0.8h, v0.8h, v1.8h
+
+    ldr   d1, [src, src_stride]
+    ldr   d2, [dst, dst_stride]
+    sub   v1.8h, v1.8h, v2.8h
+
+    add   src, src, src_stride, lsl 1
+    add   src, src, dst_stride, lsl 1
+
+    ldr   d2, [src]
+    ldr   d3, [dst]
+    sub   v2.8h, v2.8h, v3.8h
+
+    ldr   d3, [src, src_stride]
+    ldr   d4, [dst, src_stride]
+    sub   v3.8h, v3.8h, v4.8h
+
+    // pack rows 0-2, 1-3
+    mov   v0.d[1], v2.d[0]
+    mov   v1.d[1], v3.d[0]
+
+    // Horizontal transform
+
+    butterfly v2, v3, v0, v1
+    interleave v0, v1, v2, v3
+    butterfly v2, v3, v0, v1
+    interleave_pairs v0, v1, v2, v3
+
+    // Vertical transform
+
+    butterfly v2, v3, v0, v1
+    interleave v0, v1, v2, v3
+    butterfly v2, v3, v0, v1
+
+    // absolute value of transform coefficients
+    abs   v2.8h, v2.8h
+    abs   v3.8h, v3.8h
+
+    // 1 stage sum
+    add v0.8h, v2.8h, v3.8h
+    addv    h0, v0.8h
+
+    fmov    w0, s0
+    normalize_4
+    ret
+
+    #undef src
+    #undef src_stride
+    #undef dst
+    #undef dst_stride
+endfunc
