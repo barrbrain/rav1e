@@ -317,14 +317,40 @@ pub(crate) mod rust {
     debug_assert!(w <= 8);
     debug_assert!(h <= 8);
 
+    let (sse, svar, dvar) = match (w, h) {
+      (8, 8) => cdef_dist_kernel_inner::<8, 8, T>(src, dst),
+      (8, 4) => cdef_dist_kernel_inner::<8, 4, T>(src, dst),
+      (4, 8) => cdef_dist_kernel_inner::<4, 8, T>(src, dst),
+      (4, 4) => cdef_dist_kernel_inner::<4, 4, T>(src, dst),
+      _ => cdef_dist_kernel_impl(src, h, dst, w),
+    };
+
+    apply_ssim_boost(sse, svar, dvar, bit_depth)
+  }
+
+  fn cdef_dist_kernel_inner<const W: usize, const H: usize, T: Pixel>(
+    src: &PlaneRegion<'_, T>, dst: &PlaneRegion<'_, T>,
+  ) -> (u32, u32, u32) {
+    cdef_dist_kernel_impl(src, W, dst, W)
+  }
+
+  #[inline(always)]
+  fn cdef_dist_kernel_impl<T: Pixel>(
+    src: &PlaneRegion<'_, T>, h: usize, dst: &PlaneRegion<'_, T>, w: usize,
+  ) -> (u32, u32, u32) {
     // Compute the following summations.
-    let mut sum_s: u32 = 0; // sum(src_{i,j})
-    let mut sum_d: u32 = 0; // sum(dst_{i,j})
-    let mut sum_s2: u32 = 0; // sum(src_{i,j}^2)
-    let mut sum_d2: u32 = 0; // sum(dst_{i,j}^2)
-    let mut sum_sd: u32 = 0; // sum(src_{i,j} * dst_{i,j})
-    for (row1, row2) in src.rows_iter().take(h).zip(dst.rows_iter()) {
-      for (s, d) in row1[..w].iter().zip(row2) {
+    let mut sum_s: u32 = 0;
+    // sum(src_{i,j})
+    let mut sum_d: u32 = 0;
+    // sum(dst_{i,j})
+    let mut sum_s2: u32 = 0;
+    // sum(src_{i,j}^2)
+    let mut sum_d2: u32 = 0;
+    // sum(dst_{i,j}^2)
+    let mut sum_sd: u32 = 0;
+    // sum(src_{i,j} * dst_{i,j})
+    for (row1, row2) in src.rows_iter().zip(dst.rows_iter()).take(h) {
+      for (s, d) in row1[..w].iter().zip(&row2[..w]) {
         let s: u32 = u32::cast_from(*s);
         let d: u32 = u32::cast_from(*d);
         sum_s += s;
@@ -369,8 +395,7 @@ pub(crate) mod rust {
       ((svar as u64 * div + (1 << scale_shift >> 1)) >> scale_shift) as u32;
     dvar =
       ((dvar as u64 * div + (1 << scale_shift >> 1)) >> scale_shift) as u32;
-
-    apply_ssim_boost(sse, svar, dvar, bit_depth)
+    (sse, svar, dvar)
   }
 }
 
