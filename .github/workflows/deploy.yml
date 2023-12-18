@@ -7,7 +7,6 @@ on:
 jobs:
   windows-rav1e-ch-binary:
 
-    if: github.repository_owner == 'xiph'
     runs-on: windows-latest
 
     steps:
@@ -128,7 +127,7 @@ jobs:
 
     - name: Package pre-release binaries
       if: >
-        startsWith(github.ref, 'refs/tags/p') || github.event_name == 'schedule'
+        startsWith(github.ref, 'refs/tags/t') || github.event_name == 'schedule'
       run: |
         7z a rav1e-windows-${{ matrix.name }}.zip `
              "C:\usr\rav1e-windows-${{ matrix.conf }}-sdk"
@@ -149,7 +148,7 @@ jobs:
 
     - name: Upload pre-release binaries
       if: >
-        startsWith(github.ref, 'refs/tags/p') || github.event_name == 'schedule'
+        startsWith(github.ref, 'refs/tags/t') || github.event_name == 'schedule'
       uses: actions/upload-artifact@v4
       with:
         name: rav1e (Windows-${{ matrix.name }})
@@ -213,7 +212,6 @@ jobs:
          - target: i686-unknown-linux-musl
            target_cpu: x86-64-v3
 
-    if: github.repository_owner == 'xiph'
     runs-on: ubuntu-latest
 
     name: linux-binaries (${{ matrix.build }}, ${{ matrix.name }})
@@ -284,7 +282,7 @@ jobs:
 
     - name: Get pre-release artifact filename
       if: |
-        startsWith(github.ref, 'refs/tags/p') ||
+        startsWith(github.ref, 'refs/tags/t') ||
         github.event_name == 'schedule'
       run: |
         echo "ARTIFACT_FILE=${{ matrix.pkgname }}-${{ matrix.name }}.tar.gz" >> $GITHUB_ENV
@@ -300,7 +298,7 @@ jobs:
     - name: Create a binary tar
       if: >
         matrix.build == 'binary' &&
-          (startsWith(github.ref, 'refs/tags/p') ||
+          (startsWith(github.ref, 'refs/tags/t') ||
            startsWith(github.ref, 'refs/tags/v') ||
            github.event_name == 'schedule')
       run: |
@@ -310,7 +308,7 @@ jobs:
     - name: Create a lib tar
       if: >
         matrix.build == 'sdk' &&
-          (startsWith(github.ref, 'refs/tags/p') ||
+          (startsWith(github.ref, 'refs/tags/t') ||
            startsWith(github.ref, 'refs/tags/v') ||
            github.event_name == 'schedule')
       run: |
@@ -320,7 +318,7 @@ jobs:
 
     - name: Upload artifact
       if: >
-        startsWith(github.ref, 'refs/tags/p') ||
+        startsWith(github.ref, 'refs/tags/t') ||
         startsWith(github.ref, 'refs/tags/v') ||
         github.event_name == 'schedule'
       uses: actions/upload-artifact@v4
@@ -329,7 +327,6 @@ jobs:
         path: ${{ env.ARTIFACT_FILE }}
 
   macos-binaries:
-    if: github.repository_owner == 'xiph'
     runs-on: macos-latest
 
     strategy:
@@ -394,7 +391,7 @@ jobs:
 
     - name: Get pre-release artifact filename
       if: |
-        startsWith(github.ref, 'refs/tags/p') ||
+        startsWith(github.ref, 'refs/tags/t') ||
         github.event_name == 'schedule'
       run: |
         echo "ARTIFACT_FILE=${{ matrix.pkgname }}-${{ matrix.name }}.${{ matrix.ext }}" >> $GITHUB_ENV
@@ -410,7 +407,7 @@ jobs:
     - name: Create a binary zip
       if: >
         matrix.build == 'binary' &&
-          (startsWith(github.ref, 'refs/tags/p') ||
+          (startsWith(github.ref, 'refs/tags/t') ||
            startsWith(github.ref, 'refs/tags/v') ||
            github.event_name == 'schedule')
       run: |
@@ -420,7 +417,7 @@ jobs:
     - name: Create a lib tar
       if: >
         matrix.build == 'sdk' &&
-          (startsWith(github.ref, 'refs/tags/p') ||
+          (startsWith(github.ref, 'refs/tags/t') ||
            startsWith(github.ref, 'refs/tags/v') ||
            github.event_name == 'schedule')
       run: |
@@ -430,7 +427,7 @@ jobs:
 
     - name: Upload artifact
       if: >
-        startsWith(github.ref, 'refs/tags/p') ||
+        startsWith(github.ref, 'refs/tags/t') ||
         startsWith(github.ref, 'refs/tags/v') ||
         github.event_name == 'schedule'
       uses: actions/upload-artifact@v4
@@ -440,7 +437,6 @@ jobs:
 
   deploy:
     needs: [windows-rav1e-ch-binary, windows-binaries, linux-binaries, macos-binaries]
-    if: github.repository_owner == 'xiph'
     runs-on: ubuntu-latest
 
     steps:
@@ -501,7 +497,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create a pre-release
-      if: startsWith(github.ref, 'refs/tags/p')
+      if: startsWith(github.ref, 'refs/tags/t')
       uses: softprops/action-gh-release@v1
       with:
         name: Weekly pre-release
