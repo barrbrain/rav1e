@@ -170,10 +170,6 @@ pub fn select_segment<T: Pixel>(
   }
 
   use crate::api::SegmentationLevel;
-  if fi.config.speed_settings.segmentation == SegmentationLevel::Full {
-    return ts.segmentation.min_segment..=ts.segmentation.max_segment;
-  }
-
   let frame_bo = ts.to_frame_block_offset(tile_bo);
   let scale = spatiotemporal_scale(fi, frame_bo, bsize);
 
@@ -181,6 +177,10 @@ pub fn select_segment<T: Pixel>(
 
   // Avoid going into lossless mode by never bringing qidx below 1.
   let sidx = sidx.max(ts.segmentation.min_segment);
+
+  if fi.config.speed_settings.segmentation == SegmentationLevel::Full {
+    return sidx..=ts.segmentation.max_segment.min(sidx.saturating_add(1));
+  }
 
   sidx..=sidx
 }
